@@ -1,7 +1,7 @@
 {
   "name": "stayon",
   "displayName": "StayOn",
-  "description": "Earn tokens during Cursor Agent wait time",
+  "description": "Earn points during Cursor Agent wait time",
   "version": "0.1.0",
   "publisher": "stayon",
   "license": "MIT",
@@ -62,6 +62,16 @@
           "enum": ["earn", "learn", "focus"],
           "default": "earn",
           "description": "Default task mode"
+        },
+        "stayon.apiBaseUrl": {
+          "type": "string",
+          "default": "",
+          "description": "StayOn backend URL (Next.js app) for CPX surveys and reward sync"
+        },
+        "stayon.cpxSurveys": {
+          "type": "boolean",
+          "default": true,
+          "description": "Load CPX SurveyWall in earn mode when apiBaseUrl is set"
         }
       }
     }

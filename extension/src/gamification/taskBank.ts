@@ -37,10 +37,10 @@ export const QUIZ_TASKS: QuizTask[] = [
   {
     kind: 'quiz',
     id: 'q5',
-    question: 'Flow bonus tokens are earned when you…',
+    question: 'Flow bonus points are earned when you…',
     options: [
       'Complete a task before the agent stops',
-      'Redeem tokens',
+      'Redeem points',
       'Disable hooks',
     ],
     correctIndex: 0,
@@ -65,7 +65,7 @@ export const QUIZ_TASKS: QuizTask[] = [
   {
     kind: 'quiz',
     id: 'q8',
-    question: '1,000 StayOn tokens ≈',
+    question: '1,000 StayOn points ≈',
     options: ['€1.00', '€0.10', '€10.00'],
     correctIndex: 1,
     reward: 9,

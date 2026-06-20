@@ -2,7 +2,21 @@
   box-sizing: border-box;
 }
 
+/* StayOn brand tokens — see docs/11_branding.md */
+body.vscode-light {
+  --stayon-brand: #00a896;
+  --stayon-points: #d97706;
+}
+
+body.vscode-dark,
+body.vscode-high-contrast {
+  --stayon-brand: #2dd4bf;
+  --stayon-points: #fbbf24;
+}
+
 body {
+  --stayon-brand: #2dd4bf;
+  --stayon-points: #fbbf24;
   margin: 0;
   padding: 0;
   background: var(--vscode-sideBar-background);
@@ -35,6 +49,20 @@ body {
 .brand {
   font-weight: 600;
   font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--stayon-brand);
+}
+
+.brand-mark {
+  position: relative;
+  width: 14px;
+  height: 14px;
+  border-radius: 4px;
+  background: var(--stayon-brand);
+  flex-shrink: 0;
+  box-shadow: 8px -3px 0 -3px var(--stayon-points);
 }
 
 .meta {
@@ -45,7 +73,7 @@ body {
 .balance {
   font-size: 18px;
   font-weight: 700;
-  color: var(--vscode-charts-yellow, #e2c08d);
+  color: var(--stayon-points);
 }
 
 .cash {
@@ -70,8 +98,9 @@ body {
 }
 
 .tab.active {
-  background: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
+  background: var(--stayon-brand);
+  color: var(--vscode-button-foreground, #fff);
+  border-color: transparent;
 }
 
 .agent-pill {
@@ -81,7 +110,7 @@ body {
   padding: 10px;
   border-radius: 6px;
   background: var(--vscode-editor-inactiveSelectionBackground);
-  border-left: 3px solid var(--vscode-progressBar-background, #007acc);
+  border-left: 3px solid var(--stayon-brand);
 }
 
 .agent-pill.ready {
@@ -98,7 +127,7 @@ body {
   height: 8px;
   border-radius: 50%;
   margin-top: 4px;
-  background: var(--vscode-progressBar-background, #007acc);
+  background: var(--stayon-brand);
   flex-shrink: 0;
 }
 
@@ -136,7 +165,7 @@ body {
 }
 
 .reward-tag {
-  color: var(--vscode-charts-yellow, #e2c08d);
+  color: var(--stayon-points);
 }
 
 .question {
@@ -182,8 +211,8 @@ body {
   padding: 8px 12px;
   border: none;
   border-radius: 4px;
-  background: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
+  background: var(--stayon-brand);
+  color: var(--vscode-button-foreground, #042f2e);
   cursor: pointer;
   font-size: 12px;
 }
@@ -207,7 +236,7 @@ body {
 
 .progress-fill {
   height: 100%;
-  background: var(--vscode-progressBar-background, #007acc);
+  background: var(--stayon-brand);
   transition: width 0.3s ease;
 }
 
@@ -234,9 +263,9 @@ body {
   top: 40%;
   left: 50%;
   transform: translate(-50%, -50%);
-  font-size: 24px;
+  font-size: 20px;
   font-weight: 700;
-  color: var(--vscode-charts-yellow, #e2c08d);
+  color: var(--stayon-points);
   pointer-events: none;
   animation: floatUp 1.2s ease-out forwards;
   z-index: 100;
@@ -266,8 +295,9 @@ body {
 }
 
 .mode-btn.active {
-  background: var(--vscode-button-background);
-  color: var(--vscode-button-foreground);
+  background: var(--stayon-brand);
+  color: var(--vscode-button-foreground, #042f2e);
+  border-color: transparent;
 }
 
 .wallet-grid {
@@ -287,6 +317,11 @@ body {
 .stat-value {
   font-size: 16px;
   font-weight: 600;
+}
+
+.stat-value.points-value {
+  color: var(--stayon-points);
+  font-size: 14px;
 }
 
 .history-item {
@@ -320,4 +355,17 @@ body {
 @keyframes spin {
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
+}
+
+.cpx-card {
+  padding-bottom: 8px;
+}
+
+.cpx-frame {
+  width: 100%;
+  min-height: 420px;
+  height: 50vh;
+  border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.35));
+  border-radius: 6px;
+  background: #fff;
 }

@@ -1,4 +1,5 @@
 import confetti from 'canvas-confetti';
+import { formatPoints, formatPointsDelta, formatRewardTag } from '../../src/brand/formatPoints';
 
 declare function acquireVsCodeApi(): {
   postMessage(msg: unknown): void;
@@ -28,6 +29,7 @@ type AgentStatus = 'idle' | 'busy' | 'ready';
 
 let wallet: WalletSnapshot | undefined;
 let mode: 'earn' | 'learn' | 'focus' = 'earn';
+let cpxEnabled = false;
 let status: AgentStatus = 'idle';
 let contextNote = '';
 let activeTab: 'play' | 'wallet' | 'stats' = 'play';
@@ -44,6 +46,7 @@ window.addEventListener('message', (event) => {
     case 'init':
       wallet = msg.wallet;
       mode = msg.mode;
+      cpxEnabled = Boolean(msg.cpxEnabled);
       render();
       break;
     case 'state':
@@ -63,13 +66,16 @@ window.addEventListener('message', (event) => {
           vscode.postMessage({ type: 'sponsoredView', taskId: id });
         }
       }
+      if (currentTask?.kind === 'cpx') {
+        vscode.postMessage({ type: 'cpxEngaged' });
+      }
       break;
     case 'wallet':
       wallet = msg.wallet;
       render();
       break;
     case 'reward':
-      showRewardFloat(`+${msg.tokens} ⭐`);
+      showRewardFloat(formatPointsDelta(msg.tokens));
       celebrate();
       render();
       break;
@@ -78,7 +84,7 @@ window.addEventListener('message', (event) => {
       contextNote = msg.contextNote ?? contextNote;
       render();
       if (msg.flowBonus) {
-        setTimeout(() => showRewardFloat(`Flow +${msg.flowBonus} ⭐`), 400);
+        setTimeout(() => showRewardFloat(`Flow ${formatPointsDelta(msg.flowBonus)}`), 400);
       }
       break;
     case 'badge':
@@ -100,7 +106,7 @@ function celebrate(): void {
     particleCount: 50,
     spread: 55,
     origin: { y: 0.75 },
-    colors: ['#FFD700', '#FFA500', '#89d185'],
+    colors: ['#2DD4BF', '#FBBF24', '#4ADE80'],
   });
 }
 
@@ -116,10 +122,10 @@ function render(): void {
   app.innerHTML = `
     <div class="header">
       <div class="header-row">
-        <span class="brand"><i class="codicon codicon-star-full"></i> StayOn</span>
+        <span class="brand"><span class="brand-mark" aria-hidden="true"></span> StayOn</span>
         <span class="meta">Lv.${wallet.level} · 🔥 ${wallet.dailyStreak}</span>
       </div>
-      <div class="balance">${wallet.tokens} ⭐</div>
+      <div class="balance">${formatPoints(wallet.tokens)}</div>
       <div class="cash">${wallet.cashEstimate}</div>
     </div>
 
@@ -180,14 +186,14 @@ function renderPlay(): string {
 }
 
 function renderIdleHint(): string {
-  return `<div class="card"><p class="question">Submit a Cursor Agent prompt to start earning while you wait.</p></div>`;
+  return `<div class="card"><p class="question">Submit a Cursor Agent prompt to start earning points while you wait.</p></div>`;
 }
 
 function renderTask(task: TaskPayload): string {
   if (task.kind === 'quiz') {
     const options = (task.options as string[]) || [];
     return `<div class="card">
-      <div class="card-label"><span>Quick task</span><span class="reward-tag">+${task.reward} ⭐</span></div>
+      <div class="card-label"><span>Quick task</span><span class="reward-tag">${formatRewardTag(Number(task.reward))}</span></div>
       <div class="question">${escapeHtml(String(task.question))}</div>
       <div class="options">
         ${options
@@ -203,29 +209,37 @@ function renderTask(task: TaskPayload): string {
   if (task.kind === 'sponsored') {
     return `<div class="card">
       <div class="sponsored-badge">Sponsored</div>
-      <div class="card-label"><span>Developer card</span><span class="reward-tag">+${task.viewReward} ⭐</span></div>
+      <div class="card-label"><span>Developer card</span><span class="reward-tag">${formatRewardTag(Number(task.viewReward))}</span></div>
       <div class="sponsor-name">${escapeHtml(String(task.sponsor))}</div>
       <p class="question">${escapeHtml(String(task.tagline))}</p>
       <button class="btn" data-sponsor-url="${escapeHtml(String(task.url))}" data-sponsor-id="${task.id}">
-        Visit (+${task.clickReward} ⭐ click)
+        Visit (${formatRewardTag(Number(task.clickReward))} click)
       </button>
     </div>`;
   }
 
   if (task.kind === 'learn') {
     return `<div class="card">
-      <div class="card-label"><span>Learn</span><span class="reward-tag">+${task.reward} ⭐</span></div>
+      <div class="card-label"><span>Learn</span><span class="reward-tag">${formatRewardTag(Number(task.reward))}</span></div>
       <div class="question">${escapeHtml(String(task.question))}</div>
       <p class="context">Answer: ${escapeHtml(String(task.answer))}</p>
-      <button class="btn" data-learn-id="${task.id}">Got it — earn tokens</button>
+      <button class="btn" data-learn-id="${task.id}">Got it — earn points</button>
     </div>`;
   }
 
   if (task.kind === 'focus') {
     return `<div class="card">
-      <div class="card-label"><span>Focus</span><span class="reward-tag">+${task.reward} ⭐</span></div>
+      <div class="card-label"><span>Focus</span><span class="reward-tag">${formatRewardTag(Number(task.reward))}</span></div>
       <div class="question">${escapeHtml(String(task.prompt))}</div>
       <button class="btn" data-focus-id="${task.id}">Done (${task.durationSec}s pause)</button>
+    </div>`;
+  }
+
+  if (task.kind === 'cpx') {
+    return `<div class="card cpx-card">
+      <div class="card-label"><span>CPX Research</span><span class="reward-tag">Real surveys</span></div>
+      <p class="context">Complete a survey while the agent works. Points sync when CPX confirms.</p>
+      <iframe class="cpx-frame" src="${escapeHtml(String(task.iframeUrl))}" title="CPX SurveyWall"></iframe>
     </div>`;
   }
 
@@ -234,7 +248,7 @@ function renderTask(task: TaskPayload): string {
 
 function renderWallet(): string {
   return `<div class="wallet-grid">
-      <div class="stat-box"><div>Tokens</div><div class="stat-value">${wallet!.tokens} ⭐</div></div>
+      <div class="stat-box"><div>Points</div><div class="stat-value points-value">${formatPoints(wallet!.tokens)}</div></div>
       <div class="stat-box"><div>Cash est.</div><div class="stat-value">${wallet!.cashEstimate}</div></div>
     </div>
     <div class="progress-wrap">
@@ -247,12 +261,12 @@ function renderWallet(): string {
         wallet!.history.length
           ? wallet!.history
               .slice(0, 8)
-              .map((h) => `<div class="history-item">+${h.tokens} ⭐ · ${escapeHtml(h.label)}</div>`)
+              .map((h) => `<div class="history-item">${formatPointsDelta(h.tokens)} · ${escapeHtml(h.label)}</div>`)
               .join('')
-          : '<p class="context">Complete a wait-task to earn tokens.</p>'
+          : '<p class="context">Complete a wait-task to earn points.</p>'
       }
     </div>
-    <button class="btn secondary" disabled>Redeem (min 5,000 ⭐ — coming soon)</button>`;
+    <button class="btn secondary" disabled>Redeem (min 5,000 points — coming soon)</button>`;
 }
 
 function renderStats(): string {

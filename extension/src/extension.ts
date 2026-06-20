@@ -8,6 +8,9 @@ import { StayOnPanelProvider } from './panel/StayOnPanel';
 import { TaskSession } from './gamification/tasks';
 import { defaultWallet, WALLET_KEY } from './gamification/wallet';
 import type { TaskMode, Wallet } from './types';
+import { formatPoints } from './brand/formatPoints';
+import { getOrCreateUserId } from './api/config';
+import { RewardSync } from './api/rewardSync';
 import { showHookVerifyUI, verifyHookSetup } from './setup/verifyHooks';
 
 let outputChannel: vscode.OutputChannel;
@@ -39,6 +42,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const taskSession = new TaskSession();
   const busyState = new BusyState();
+  const userId = getOrCreateUserId(context);
 
   const panelProvider = new StayOnPanelProvider(
     context.extensionUri,
@@ -47,8 +51,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     taskSession,
     getMode,
     setMode,
+    () => userId,
     log
   );
+
+  const rewardSync = new RewardSync(
+    () => userId,
+    () => wallet,
+    saveWallet,
+    (tokens, label) => panelProvider.postReward(tokens, label),
+    log
+  );
+  rewardSync.start();
+  context.subscriptions.push({ dispose: () => rewardSync.stop() });
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(StayOnPanelProvider.viewType, panelProvider, {
@@ -149,7 +164,7 @@ function writeBridgeFiles(port: number): void {
 
 function updateStatusBar(item: vscode.StatusBarItem, wallet: Wallet, status: string): void {
   const busy = status === 'busy' ? '● ' : '';
-  item.text = `${busy}StayOn · Lv.${wallet.level} · 🔥${wallet.dailyStreak} · ${wallet.tokens} ⭐`;
+  item.text = `${busy}StayOn · Lv.${wallet.level} · 🔥${wallet.dailyStreak} · ${formatPoints(wallet.tokens, true)}`;
   item.tooltip = `StayOn — ${status}. Click to open panel.`;
   item.show();
 }

@@ -98,7 +98,14 @@ export interface LearnTask {
   reward: number;
 }
 
-export type TaskPayload = QuizTask | SponsoredTask | FocusTask | LearnTask;
+export interface CpxSurveyTask {
+  kind: 'cpx';
+  id: string;
+  iframeUrl: string;
+  label: string;
+}
+
+export type TaskPayload = QuizTask | SponsoredTask | FocusTask | LearnTask | CpxSurveyTask;
 
 export interface BusyEndPayload {
   status: string;
@@ -108,7 +115,7 @@ export interface BusyEndPayload {
 }
 
 export type ToWebviewMessage =
-  | { type: 'init'; wallet: WalletSnapshot; mode: TaskMode }
+  | { type: 'init'; wallet: WalletSnapshot; mode: TaskMode; cpxEnabled?: boolean }
   | { type: 'state'; status: AgentStatus; contextNote?: string; tool?: string }
   | { type: 'task'; task: TaskPayload }
   | { type: 'wallet'; wallet: WalletSnapshot }
@@ -124,4 +131,5 @@ export type FromWebviewMessage =
   | { type: 'focusComplete'; taskId: string }
   | { type: 'setMode'; mode: TaskMode }
   | { type: 'dismissReady' }
-  | { type: 'openSponsor'; url: string; taskId: string };
+  | { type: 'openSponsor'; url: string; taskId: string }
+  | { type: 'cpxEngaged' };

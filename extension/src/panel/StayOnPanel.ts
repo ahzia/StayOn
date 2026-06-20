@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import type {
   AgentStatus,
   BusyEndPayload,
+  CpxSurveyTask,
   FromWebviewMessage,
   TaskMode,
   ToWebviewMessage,
@@ -10,6 +11,8 @@ import type {
 import { TaskSession } from '../gamification/tasks';
 import { toSnapshot } from '../gamification/wallet';
 import { applyFlowBonus, onWaitEndWithTask, onWaitEndWithoutTask } from '../gamification/streaks';
+import { fetchCpxWallUrl } from '../api/stayonApi';
+import { isCpxEnabled } from '../api/config';
 
 export class StayOnPanelProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'stayon.panel';
@@ -23,6 +26,7 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
     private readonly taskSession: TaskSession,
     private readonly getMode: () => TaskMode,
     private readonly setMode: (mode: TaskMode) => void,
+    private readonly getUserId: () => string,
     private readonly log: (msg: string) => void
   ) {}
 
@@ -58,8 +62,31 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
   }
 
   onBusyStart(): void {
+    void this.startBusySession();
+  }
+
+  private async startBusySession(): Promise<void> {
     const mode = this.getMode();
-    const task = this.taskSession.startWait(mode);
+    this.taskSession.startWait(mode);
+    let task = this.taskSession.getCurrentTask()!;
+
+    if (mode === 'earn' && isCpxEnabled()) {
+      const wall = await fetchCpxWallUrl(this.getUserId(), this.taskSession.getWaitSessionId());
+      if (wall.ok && wall.iframeUrl) {
+        const cpxTask: CpxSurveyTask = {
+          kind: 'cpx',
+          id: 'cpx-wall',
+          iframeUrl: wall.iframeUrl,
+          label: 'CPX Research survey',
+        };
+        this.taskSession.setTask(cpxTask);
+        task = cpxTask;
+        this.log('CPX SurveyWall loaded');
+      } else if (wall.error) {
+        this.log(`CPX wall unavailable: ${wall.error}`);
+      }
+    }
+
     this.showPanel(true);
     this.post({ type: 'state', status: 'busy' });
     this.post({ type: 'task', task });
@@ -97,11 +124,17 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
     this.post({ type: 'wallet', wallet: toSnapshot(this.getWallet()) });
   }
 
+  postReward(tokens: number, label: string): void {
+    this.post({ type: 'reward', tokens, label });
+    this.postWallet();
+  }
+
   private postInit(): void {
     this.post({
       type: 'init',
       wallet: toSnapshot(this.getWallet()),
       mode: this.getMode(),
+      cpxEnabled: isCpxEnabled(),
     });
   }
 
@@ -165,6 +198,10 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
         break;
       }
 
+      case 'cpxEngaged':
+        this.taskSession.noteCpxEngaged();
+        break;
+
       case 'focusComplete': {
         const result = this.taskSession.completeFocus(wallet, msg.taskId);
         if (result) {
@@ -209,7 +246,7 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource}; img-src ${webview.cspSource} data:;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource}; img-src ${webview.cspSource} data:; frame-src https://offers.cpx-research.com https://click.cpx-research.com https://live-api.cpx-research.com;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="${codiconsUri}" rel="stylesheet">
   <link href="${styleUri}" rel="stylesheet">

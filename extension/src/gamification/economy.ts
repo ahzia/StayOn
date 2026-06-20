@@ -1,6 +1,9 @@
 export const ECONOMY = {
+  /** 1 point ≈ €0.0001 — wallet field is still `tokens` in persisted state */
+  POINT_TO_EUR: 0.0001,
   TOKEN_TO_EUR: 0.0001,
   FLOW_BONUS: 5,
+  REDEEM_MIN_POINTS: 5000,
   REDEEM_MIN_TOKENS: 5000,
   QUIZ_REWARD: { min: 8, max: 15 },
   SPONSORED_VIEW: 5,

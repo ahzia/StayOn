@@ -24,6 +24,12 @@ extension/media/panel/main.js
 extension/media/panel/main.js.map
 extension/dist/
 
+# Next.js web app
+web/.next/
+web/out/
+web/.data/
+web/node_modules/
+
 # Local / IDE (optional user overrides)
 .idea/
 *.swp
