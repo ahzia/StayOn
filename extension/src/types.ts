@@ -218,4 +218,6 @@ export type FromWebviewMessage =
   | { type: 'openSurveyProfile' }
   | { type: 'dismissSurvey' }
   | { type: 'resumeSurvey' }
-  | { type: 'pauseSurvey' };
+  | { type: 'pauseSurvey' }
+  | { type: 'openCpxInBrowser' }
+  | { type: 'openCpxInCursor' };

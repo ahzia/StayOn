@@ -76,6 +76,16 @@
           "type": "boolean",
           "default": true,
           "description": "Load CPX SurveyWall in surveys mode when apiBaseUrl is set"
+        },
+        "stayon.alertSoundOnReady": {
+          "type": "boolean",
+          "default": true,
+          "description": "Play a short sound when the Cursor Agent finishes (audible even if you are in an external browser)"
+        },
+        "stayon.alertFocusOnReady": {
+          "type": "boolean",
+          "default": true,
+          "description": "Bring Cursor to the foreground when the Agent finishes (macOS: activates the Cursor app)"
         }
       }
     }

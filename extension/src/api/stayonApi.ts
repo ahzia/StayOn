@@ -140,6 +140,23 @@ export async function saveSurveyProfile(
   }
 }
 
+export async function deleteSurveyProfile(userId: string): Promise<boolean> {
+  const base = apiBase();
+  if (!base) {
+    return false;
+  }
+
+  try {
+    const data = await fetchJson<{ ok?: boolean }>(
+      `${base}/api/user/${encodeURIComponent(userId)}/profile`,
+      { method: 'DELETE' }
+    );
+    return Boolean(data.ok);
+  } catch {
+    return false;
+  }
+}
+
 export async function fetchPendingRewards(userId: string): Promise<PendingResponse> {
   const base = apiBase();
   if (!base) {

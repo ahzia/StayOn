@@ -70,3 +70,21 @@ export function saveProfile(
   saveStore(store);
   return record;
 }
+
+export function deleteProfile(userId: string): boolean {
+  const store = ensureStore();
+  if (!store.profiles[userId]) {
+    return false;
+  }
+  delete store.profiles[userId];
+  saveStore(store);
+  return true;
+}
+
+export function clearAllProfiles(): number {
+  const store = ensureStore();
+  const count = Object.keys(store.profiles).length;
+  store.profiles = {};
+  saveStore(store);
+  return count;
+}

@@ -95,7 +95,9 @@ let currentTask: TaskPayload | undefined;
 let lastBalance = -1;
 
 const CPX_FRAME_ID = 'stayon-cpx-frame';
+const CPX_HOST_ID = 'cpx-host';
 const app = document.getElementById('app')!;
+let cpxRenderLocked = false;
 
 vscode.postMessage({ type: 'ready' });
 
@@ -130,12 +132,15 @@ window.addEventListener('message', (event) => {
       if (msg.session) {
         surveyPersist = false;
         surveyActive = false;
+      } else {
+        cpxRenderLocked = false;
       }
       persistUiState();
       render();
       break;
     case 'destroyCpxFrame':
       destroyCpxFrame();
+      cpxRenderLocked = false;
       syncCpxFrameAfterRender();
       break;
     case 'surveyProfile':
@@ -179,6 +184,7 @@ window.addEventListener('message', (event) => {
       persistUiState();
       render();
       if (currentTask?.kind === 'cpx') {
+        cpxRenderLocked = true;
         vscode.postMessage({ type: 'cpxEngaged' });
       }
       break;
@@ -249,10 +255,11 @@ function shouldShowCpxTask(): boolean {
 }
 
 function detachCpxFrameBeforeRender(): void {
-  const frame = document.getElementById(CPX_FRAME_ID);
-  if (frame && frame.parentElement && frame.parentElement !== document.body) {
-    document.body.appendChild(frame);
-  }
+  // iframe lives in #cpx-host outside #app — no detach needed
+}
+
+function getCpxHost(): HTMLElement | null {
+  return document.getElementById(CPX_HOST_ID);
 }
 
 function getOrCreateCpxFrame(): HTMLIFrameElement {
@@ -262,6 +269,15 @@ function getOrCreateCpxFrame(): HTMLIFrameElement {
     frame.id = CPX_FRAME_ID;
     frame.className = 'cpx-frame';
     frame.title = 'CPX SurveyWall';
+    frame.setAttribute(
+      'allow',
+      'fullscreen; geolocation; microphone; camera; payment; clipboard-read; clipboard-write'
+    );
+    frame.referrerPolicy = 'no-referrer-when-downgrade';
+    const host = getCpxHost();
+    if (host) {
+      host.appendChild(frame);
+    }
   }
   return frame;
 }
@@ -270,55 +286,60 @@ function setCpxFrameUrl(url: string, forceReload = false): void {
   if (!url) return;
   const frame = getOrCreateCpxFrame();
   const currentSrc = frame.getAttribute('src') ?? '';
-  if (forceReload || currentSrc !== url) {
+
+  if (forceReload) {
+    frame.src = url;
+    return;
+  }
+
+  // Only set the initial wall URL. Once the user picks a survey, CPX navigates
+  // the iframe (survey_id, click.cpx-research.com, etc.) — resetting src here
+  // sends them back to the survey list.
+  if (!currentSrc) {
     frame.src = url;
   }
 }
 
-function mountCpxFrame(slot: HTMLElement | null): void {
-  const frame = getOrCreateCpxFrame();
-  if (slot) {
-    if (frame.parentElement !== slot) {
-      slot.appendChild(frame);
-    }
-    frame.style.display = 'block';
-  } else {
-    frame.style.display = 'none';
-    if (frame.parentElement !== document.body) {
-      document.body.appendChild(frame);
-    }
+function mountCpxFrame(show: boolean): void {
+  const host = getCpxHost();
+  const frame = document.getElementById(CPX_FRAME_ID);
+  if (!host) {
+    return;
+  }
+  host.hidden = !show;
+  document.body.classList.toggle('cpx-visible', show);
+  if (show && frame && !host.contains(frame)) {
+    host.appendChild(frame);
   }
 }
 
 function destroyCpxFrame(): void {
-  document.getElementById(CPX_FRAME_ID)?.remove();
+  cpxRenderLocked = false;
+  const frame = document.getElementById(CPX_FRAME_ID);
+  if (frame) {
+    frame.removeAttribute('src');
+    frame.remove();
+  }
+  const host = getCpxHost();
+  if (host) {
+    host.hidden = true;
+  }
+  document.body.classList.remove('cpx-visible');
 }
 
 function syncCpxFrameAfterRender(): void {
   if (!shouldShowCpxTask() || !currentTask) {
-    mountCpxFrame(null);
+    mountCpxFrame(false);
     return;
   }
   const url = String(currentTask.iframeUrl ?? '');
   if (!url) {
-    mountCpxFrame(null);
+    mountCpxFrame(false);
     return;
   }
-  const resumed = Boolean(currentTask.resumed);
   const forceReload = Boolean(currentTask.forceReload);
-  setCpxFrameUrl(url, forceReload || !resumed);
-  const slot = document.getElementById('cpx-slot');
-  if (slot) {
-    mountCpxFrame(slot);
-  } else {
-    // Slot missing — retry after DOM paint (e.g. right after destroyCpxFrame)
-    requestAnimationFrame(() => {
-      const retrySlot = document.getElementById('cpx-slot');
-      if (retrySlot && shouldShowCpxTask()) {
-        mountCpxFrame(retrySlot);
-      }
-    });
-  }
+  setCpxFrameUrl(url, forceReload);
+  mountCpxFrame(true);
 }
 
 function showRewardFloat(text: string): void {
@@ -350,11 +371,17 @@ function updateBalanceOnly(): void {
 function render(): void {
   if (!wallet) {
     app.innerHTML = '<p>Loading StayOn…</p>';
+    mountCpxFrame(false);
+    return;
+  }
+
+  if (cpxRenderLocked && shouldShowCpxTask()) {
+    updateBalanceOnly();
+    syncCpxFrameAfterRender();
     return;
   }
 
   restoreUiState();
-  detachCpxFrameBeforeRender();
 
   const balancePop = lastBalance >= 0 && wallet.tokens > lastBalance ? ' balance-pop' : '';
   lastBalance = wallet.tokens;
@@ -599,7 +626,11 @@ function renderTask(task: TaskPayload): string {
     return `<div class="card cpx-card card-enter section-surveys">
       <div class="card-label"><span>Surveys · CPX Research</span><span class="reward-tag">Paid</span></div>
       ${persistNote}
-      <div id="cpx-slot" class="cpx-slot"></div>
+      <p class="context cpx-browser-hint">In-panel list, Cursor Browser, or external browser — use what works best. External browser is most reliable for CPX today. StayOn chimes and brings Cursor back when the agent finishes.</p>
+      <div class="btn-row">
+        <button class="btn" id="open-cpx-browser">Open in browser</button>
+        <button class="btn secondary" id="open-cpx-cursor">Open in Cursor Browser</button>
+      </div>
     </div>`;
   }
 
@@ -705,14 +736,23 @@ function bindEvents(): void {
     vscode.postMessage({ type: 'pauseSurvey' });
   });
 
+  document.getElementById('open-cpx-browser')?.addEventListener('click', () => {
+    vscode.postMessage({ type: 'openCpxInBrowser' });
+  });
+  document.getElementById('open-cpx-cursor')?.addEventListener('click', () => {
+    vscode.postMessage({ type: 'openCpxInCursor' });
+  });
+
   document.getElementById('pause-survey')?.addEventListener('click', () => {
     surveyActive = false;
     surveyPersist = false;
+    cpxRenderLocked = false;
     vscode.postMessage({ type: 'pauseSurvey' });
   });
 
   document.getElementById('stop-survey')?.addEventListener('click', () => {
     surveyPersist = false;
+    cpxRenderLocked = false;
     vscode.postMessage({ type: 'dismissSurvey' });
   });
 

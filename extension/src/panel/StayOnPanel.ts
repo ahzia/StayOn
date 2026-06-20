@@ -24,6 +24,7 @@ import {
 import { fetchLearnTask } from '../api/learnApi';
 import { fetchCpxWallUrl, fetchSurveyProfile, saveSurveyProfile } from '../api/stayonApi';
 import { isCpxEnabled } from '../api/config';
+import { alertAgentReady } from '../notify/agentReady';
 
 export class StayOnPanelProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'stayon.panel';
@@ -358,6 +359,11 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
         surveyPersist: true,
       });
       this.postWallet();
+      await alertAgentReady(this.log, {
+        surveyPersist: true,
+        contextNote: payload.contextNote,
+      });
+      void this.showPanel(true);
       return;
     }
 
@@ -370,6 +376,11 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
     });
     this.postWallet();
     this.taskSession.reset();
+    await alertAgentReady(this.log, {
+      surveyPersist: false,
+      contextNote: payload.contextNote,
+    });
+    void this.showPanel(true);
   }
 
   postWallet(): void {
@@ -426,6 +437,29 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
       case 'pauseSurvey':
         await this.pauseCpxSurvey();
         break;
+
+      case 'openCpxInBrowser': {
+        const task = this.taskSession.getCurrentTask();
+        if (task?.kind === 'cpx' && task.iframeUrl) {
+          void vscode.env.openExternal(vscode.Uri.parse(task.iframeUrl));
+        }
+        break;
+      }
+
+      case 'openCpxInCursor': {
+        const task = this.taskSession.getCurrentTask();
+        if (task?.kind === 'cpx' && task.iframeUrl) {
+          try {
+            await vscode.commands.executeCommand('simpleBrowser.show', task.iframeUrl, {
+              viewColumn: vscode.ViewColumn.Beside,
+              preserveFocus: false,
+            });
+          } catch {
+            void vscode.env.openExternal(vscode.Uri.parse(task.iframeUrl));
+          }
+        }
+        break;
+      }
 
       case 'dismissSurvey':
         await this.restartCpxSurvey();
@@ -543,7 +577,7 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource}; img-src ${webview.cspSource} data:; frame-src https://offers.cpx-research.com https://click.cpx-research.com https://live-api.cpx-research.com https://wall.cpx-research.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource}; img-src ${webview.cspSource} data: https:; frame-src https: data: blob:;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="${codiconsUri}" rel="stylesheet">
   <link href="${styleUri}" rel="stylesheet">
@@ -551,6 +585,7 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
 </head>
 <body>
   <div id="app"></div>
+  <div id="cpx-host" class="cpx-host" hidden></div>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

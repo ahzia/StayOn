@@ -12,6 +12,7 @@ import { normalizeMode } from './gamification/modes';
 import { formatPoints } from './brand/formatPoints';
 import { clearPausedCpxSession } from './gamification/cpxSession';
 import { getOrCreateUserId, resetSurveyIdentity } from './api/config';
+import { deleteSurveyProfile } from './api/stayonApi';
 import { RewardSync } from './api/rewardSync';
 import { showHookVerifyUI, verifyHookSetup } from './setup/verifyHooks';
 
@@ -148,6 +149,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         return;
       }
       const prev = userId;
+      await deleteSurveyProfile(prev);
       userId = await resetSurveyIdentity(context);
       await clearPausedCpxSession(context);
       taskSession.reset();

@@ -534,17 +534,50 @@ body {
   padding-bottom: 8px;
 }
 
-.cpx-slot {
-  min-height: 420px;
+.cpx-host {
+  flex: 1;
+  min-height: 360px;
+  padding: 0 12px 12px;
+  display: flex;
+  flex-direction: column;
 }
 
-.cpx-slot .cpx-frame {
+.cpx-host[hidden] {
+  display: none !important;
+}
+
+body.cpx-visible {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+}
+
+body.cpx-visible #app {
+  flex-shrink: 0;
+}
+
+body.cpx-visible .cpx-host {
+  flex: 1;
+  min-height: 0;
+}
+
+.cpx-host .cpx-frame {
+  flex: 1;
   width: 100%;
-  min-height: 420px;
-  height: 50vh;
+  min-height: 360px;
+  height: 100%;
   border: 1px solid var(--vscode-widget-border, rgba(128, 128, 128, 0.35));
   border-radius: 6px;
   background: #fff;
+}
+
+.cpx-browser-hint {
+  font-size: 11px;
+  margin-bottom: 8px;
+}
+
+.cpx-card .btn.secondary {
+  margin-bottom: 4px;
 }
 
 .survey-paused .question {

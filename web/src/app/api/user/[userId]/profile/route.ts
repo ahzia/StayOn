@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import {
+  deleteProfile,
   getProfile,
   isProfileComplete,
   maskEmail,
@@ -119,4 +120,17 @@ export async function POST(
       completedAt: record.completedAt,
     },
   });
+}
+
+export async function DELETE(
+  _request: Request,
+  { params }: { params: Promise<{ userId: string }> }
+) {
+  const { userId } = await params;
+  if (!userId) {
+    return NextResponse.json({ ok: false, error: 'userId required' }, { status: 400 });
+  }
+
+  const removed = deleteProfile(userId);
+  return NextResponse.json({ ok: true, removed });
 }
