@@ -1,26 +1,80 @@
 @import "tailwindcss";
+@import "../theme/tokens.css";
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
+@custom-variant dark (&:where(.dark, .dark *));
 
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  /* Surfaces */
+  --color-background: var(--stayon-bg);
+  --color-subtle: var(--stayon-bg-subtle);
+  --color-surface: var(--stayon-surface);
+  --color-surface-raised: var(--stayon-surface-raised);
+  --color-border: var(--stayon-border);
+  --color-border-strong: var(--stayon-border-strong);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+  /* Text */
+  --color-foreground: var(--stayon-text);
+  --color-muted: var(--stayon-text-muted);
+  --color-subtle-text: var(--stayon-text-subtle);
+
+  /* Brand */
+  --color-brand: var(--stayon-brand);
+  --color-brand-hover: var(--stayon-brand-hover);
+  --color-brand-foreground: var(--stayon-brand-foreground);
+  --color-brand-muted: var(--stayon-brand-muted);
+
+  /* Points */
+  --color-points: var(--stayon-points);
+  --color-points-foreground: var(--stayon-points-foreground);
+  --color-points-muted: var(--stayon-points-muted);
+
+  /* Accent & semantic */
+  --color-accent: var(--stayon-accent);
+  --color-accent-muted: var(--stayon-accent-muted);
+  --color-success: var(--stayon-success);
+  --color-success-muted: var(--stayon-success-muted);
+  --color-warning: var(--stayon-warning);
+  --color-danger: var(--stayon-danger);
+
+  /* Code */
+  --color-code: var(--stayon-code-bg);
+  --color-code-text: var(--stayon-code-text);
+  --color-code-accent: var(--stayon-code-accent);
+
+  /* Radius */
+  --radius-sm: var(--stayon-radius-sm);
+  --radius-md: var(--stayon-radius-md);
+  --radius-lg: var(--stayon-radius-lg);
+
+  /* Fonts */
+  --font-sans: var(--font-geist-sans), system-ui, sans-serif;
+  --font-mono: var(--font-geist-mono), ui-monospace, monospace;
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  background: var(--stayon-bg);
+  color: var(--stayon-text);
+  font-family: var(--font-sans);
+  line-height: 1.5;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--stayon-brand) 35%, transparent);
+}
+
+:focus-visible {
+  outline: none;
+  box-shadow: var(--stayon-ring);
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
 }

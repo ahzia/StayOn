@@ -1,0 +1,108 @@
+/**
+ * StayOn design tokens — light mode (:root)
+ * Dark mode overrides in .dark { ... }
+ * See docs/11_branding.md
+ */
+
+:root {
+  /* Brand */
+  --stayon-brand: #00a896;
+  --stayon-brand-hover: #008f7f;
+  --stayon-brand-foreground: #ffffff;
+  --stayon-brand-muted: #e6f7f4;
+
+  /* Points (in-app currency) */
+  --stayon-points: #d97706;
+  --stayon-points-foreground: #451a03;
+  --stayon-points-muted: #fef3c7;
+
+  /* Secondary accent (AI / tech) */
+  --stayon-accent: #6366f1;
+  --stayon-accent-muted: #eef2ff;
+
+  /* Semantic */
+  --stayon-success: #16a34a;
+  --stayon-success-muted: #dcfce7;
+  --stayon-warning: #d97706;
+  --stayon-warning-muted: #fef3c7;
+  --stayon-danger: #dc2626;
+  --stayon-danger-muted: #fee2e2;
+
+  /* Surfaces */
+  --stayon-bg: #f8fafc;
+  --stayon-bg-subtle: #f1f5f9;
+  --stayon-surface: #ffffff;
+  --stayon-surface-raised: #ffffff;
+  --stayon-border: #e2e8f0;
+  --stayon-border-strong: #cbd5e1;
+
+  /* Text */
+  --stayon-text: #0f172a;
+  --stayon-text-muted: #64748b;
+  --stayon-text-subtle: #94a3b8;
+
+  /* Code blocks */
+  --stayon-code-bg: #0f172a;
+  --stayon-code-text: #e2e8f0;
+  --stayon-code-accent: #2dd4bf;
+
+  /* Layout */
+  --stayon-radius-sm: 6px;
+  --stayon-radius-md: 10px;
+  --stayon-radius-lg: 14px;
+  --stayon-radius-full: 9999px;
+
+  /* Shadows (light) */
+  --stayon-shadow-sm: 0 1px 2px rgb(15 23 42 / 0.06);
+  --stayon-shadow-md: 0 4px 12px rgb(15 23 42 / 0.08);
+  --stayon-shadow-lg: 0 12px 32px rgb(15 23 42 / 0.1);
+
+  /* Focus ring */
+  --stayon-ring: 0 0 0 2px var(--stayon-bg), 0 0 0 4px var(--stayon-brand);
+
+  color-scheme: light;
+}
+
+.dark {
+  --stayon-brand: #2dd4bf;
+  --stayon-brand-hover: #5eead4;
+  --stayon-brand-foreground: #042f2e;
+  --stayon-brand-muted: #0d3d38;
+
+  --stayon-points: #fbbf24;
+  --stayon-points-foreground: #422006;
+  --stayon-points-muted: #422006;
+
+  --stayon-accent: #818cf8;
+  --stayon-accent-muted: #1e1b4b;
+
+  --stayon-success: #4ade80;
+  --stayon-success-muted: #14532d;
+  --stayon-warning: #fbbf24;
+  --stayon-warning-muted: #422006;
+  --stayon-danger: #f87171;
+  --stayon-danger-muted: #450a0a;
+
+  --stayon-bg: #0b0f14;
+  --stayon-bg-subtle: #0f1419;
+  --stayon-surface: #141b24;
+  --stayon-surface-raised: #1a2332;
+  --stayon-border: #2a3544;
+  --stayon-border-strong: #3d4f63;
+
+  --stayon-text: #f1f5f9;
+  --stayon-text-muted: #94a3b8;
+  --stayon-text-subtle: #64748b;
+
+  --stayon-code-bg: #0f1419;
+  --stayon-code-text: #cbd5e1;
+  --stayon-code-accent: #2dd4bf;
+
+  --stayon-shadow-sm: 0 1px 2px rgb(0 0 0 / 0.3);
+  --stayon-shadow-md: 0 4px 12px rgb(0 0 0 / 0.35);
+  --stayon-shadow-lg: 0 12px 32px rgb(0 0 0 / 0.45);
+
+  --stayon-ring: 0 0 0 2px var(--stayon-bg), 0 0 0 4px var(--stayon-brand);
+
+  color-scheme: dark;
+}
