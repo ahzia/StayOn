@@ -35,6 +35,7 @@ let contextNote = '';
 let activeTab: 'play' | 'wallet' | 'stats' = 'play';
 let currentTask: TaskPayload | undefined;
 let sponsoredViewSent = new Set<string>();
+let lastBalance = -1;
 
 const app = document.getElementById('app')!;
 
@@ -106,7 +107,7 @@ function celebrate(): void {
     particleCount: 50,
     spread: 55,
     origin: { y: 0.75 },
-    colors: ['#2DD4BF', '#FBBF24', '#4ADE80'],
+    colors: ['#FFD700', '#FFA500', '#2DD4BF', '#89d185'],
   });
 }
 
@@ -119,13 +120,16 @@ function render(): void {
   const state = vscode.getState() as { activeTab?: typeof activeTab } | undefined;
   if (state?.activeTab) activeTab = state.activeTab;
 
+  const balancePop = lastBalance >= 0 && wallet.tokens > lastBalance ? ' balance-pop' : '';
+  lastBalance = wallet.tokens;
+
   app.innerHTML = `
     <div class="header">
       <div class="header-row">
-        <span class="brand"><span class="brand-mark" aria-hidden="true"></span> StayOn</span>
+        <span class="brand"><i class="codicon codicon-star-full brand-star"></i> StayOn</span>
         <span class="meta">Lv.${wallet.level} · 🔥 ${wallet.dailyStreak}</span>
       </div>
-      <div class="balance">${formatPoints(wallet.tokens)}</div>
+      <div class="balance${balancePop}">${formatPoints(wallet.tokens)}</div>
       <div class="cash">${wallet.cashEstimate}</div>
     </div>
 
@@ -159,13 +163,13 @@ function renderTabContent(): string {
 function renderPlay(): string {
   const agentHtml =
     status === 'ready'
-      ? `<div class="card ready-overlay">
+      ? `<div class="card ready-overlay card-enter">
           <div class="ready-title"><i class="codicon codicon-check"></i> Agent ready</div>
           <p>Return to:</p>
           <p class="context">"${escapeHtml(contextNote || 'your coding task')}"</p>
           <button class="btn" id="dismiss-ready">Back to code</button>
         </div>`
-      : `<div class="agent-pill ${status}">
+      : `<div class="agent-pill ${status} card-enter">
           <span class="dot ${status === 'busy' ? 'pulse' : ''}"></span>
           <div>
             <div>${status === 'busy' ? 'Cursor is working' : 'Waiting for agent…'}</div>
@@ -192,7 +196,7 @@ function renderIdleHint(): string {
 function renderTask(task: TaskPayload): string {
   if (task.kind === 'quiz') {
     const options = (task.options as string[]) || [];
-    return `<div class="card">
+    return `<div class="card card-enter">
       <div class="card-label"><span>Quick task</span><span class="reward-tag">${formatRewardTag(Number(task.reward))}</span></div>
       <div class="question">${escapeHtml(String(task.question))}</div>
       <div class="options">
@@ -207,7 +211,7 @@ function renderTask(task: TaskPayload): string {
   }
 
   if (task.kind === 'sponsored') {
-    return `<div class="card">
+    return `<div class="card card-enter">
       <div class="sponsored-badge">Sponsored</div>
       <div class="card-label"><span>Developer card</span><span class="reward-tag">${formatRewardTag(Number(task.viewReward))}</span></div>
       <div class="sponsor-name">${escapeHtml(String(task.sponsor))}</div>
@@ -219,7 +223,7 @@ function renderTask(task: TaskPayload): string {
   }
 
   if (task.kind === 'learn') {
-    return `<div class="card">
+    return `<div class="card card-enter">
       <div class="card-label"><span>Learn</span><span class="reward-tag">${formatRewardTag(Number(task.reward))}</span></div>
       <div class="question">${escapeHtml(String(task.question))}</div>
       <p class="context">Answer: ${escapeHtml(String(task.answer))}</p>
@@ -228,7 +232,7 @@ function renderTask(task: TaskPayload): string {
   }
 
   if (task.kind === 'focus') {
-    return `<div class="card">
+    return `<div class="card card-enter">
       <div class="card-label"><span>Focus</span><span class="reward-tag">${formatRewardTag(Number(task.reward))}</span></div>
       <div class="question">${escapeHtml(String(task.prompt))}</div>
       <button class="btn" data-focus-id="${task.id}">Done (${task.durationSec}s pause)</button>
@@ -236,7 +240,7 @@ function renderTask(task: TaskPayload): string {
   }
 
   if (task.kind === 'cpx') {
-    return `<div class="card cpx-card">
+    return `<div class="card cpx-card card-enter">
       <div class="card-label"><span>CPX Research</span><span class="reward-tag">Real surveys</span></div>
       <p class="context">Complete a survey while the agent works. Points sync when CPX confirms.</p>
       <iframe class="cpx-frame" src="${escapeHtml(String(task.iframeUrl))}" title="CPX SurveyWall"></iframe>
@@ -266,7 +270,7 @@ function renderWallet(): string {
           : '<p class="context">Complete a wait-task to earn points.</p>'
       }
     </div>
-    <button class="btn secondary" disabled>Redeem (min 5,000 points — coming soon)</button>`;
+    <button class="btn secondary" disabled>Redeem (min 5,000 ${formatPoints(5000, true)} — coming soon)</button>`;
 }
 
 function renderStats(): string {

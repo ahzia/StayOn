@@ -36,13 +36,13 @@ Implementation: `web/src/theme/` (CSS tokens + TypeScript config)
 
 ### Currency: **point / points**
 
-Use **point** and **points** everywhere user-facing. Do **not** use: token, tokens, coin, coins, star, ⭐ (except legacy code paths being migrated).
+Use **point / points** everywhere user-facing, with **⭐** beside amounts (e.g. `1,250 points ⭐` or compact `1,250 ⭐`).
 
 | Context | Correct | Avoid |
 |---------|---------|-------|
-| Balance | `1,250 points` | `1,250 tokens`, `1,250 ⭐` |
-| Singular | `1 point` | `1 token` |
-| Compact UI | `250 pts` | `250 ⭐` |
+| Balance | `1,250 points ⭐` | `1,250 tokens` |
+| Singular | `1 point ⭐` | `1 token` |
+| Compact UI | `250 ⭐` | `250 pts` without star |
 | Earn action | `Earn points` | `Earn tokens` |
 | Wallet tab | `Points balance` | `Token balance` |
 | API / code | `points` in JSON fields; internal vars may say `tokens` until refactored | — |

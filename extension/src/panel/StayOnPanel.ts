@@ -68,9 +68,23 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
   private async startBusySession(): Promise<void> {
     const mode = this.getMode();
     this.taskSession.startWait(mode);
-    let task = this.taskSession.getCurrentTask()!;
+    const task = this.taskSession.getCurrentTask();
+    if (!task) {
+      this.log('No task available for busy session');
+      return;
+    }
 
-    if (mode === 'earn' && isCpxEnabled()) {
+    // Show panel immediately — never block on CPX network
+    this.showPanel(true);
+    this.post({ type: 'state', status: 'busy' });
+    this.post({ type: 'task', task });
+    this.postWallet();
+
+    if (mode !== 'earn' || !isCpxEnabled()) {
+      return;
+    }
+
+    try {
       const wall = await fetchCpxWallUrl(this.getUserId(), this.taskSession.getWaitSessionId());
       if (wall.ok && wall.iframeUrl) {
         const cpxTask: CpxSurveyTask = {
@@ -80,17 +94,14 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
           label: 'CPX Research survey',
         };
         this.taskSession.setTask(cpxTask);
-        task = cpxTask;
+        this.post({ type: 'task', task: cpxTask });
         this.log('CPX SurveyWall loaded');
       } else if (wall.error) {
         this.log(`CPX wall unavailable: ${wall.error}`);
       }
+    } catch (err) {
+      this.log(`CPX wall failed: ${String(err)}`);
     }
-
-    this.showPanel(true);
-    this.post({ type: 'state', status: 'busy' });
-    this.post({ type: 'task', task });
-    this.postWallet();
   }
 
   onStateChange(status: AgentStatus, contextNote?: string, tool?: string): void {

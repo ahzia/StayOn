@@ -1,5 +1,6 @@
 import type { PendingReward } from '../api/stayonApi';
 import { ackRewards, fetchPendingRewards } from '../api/stayonApi';
+import { getApiBaseUrl } from '../api/config';
 import type { Wallet } from '../types';
 import { awardTokens } from '../gamification/streaks';
 
@@ -15,6 +16,9 @@ export class RewardSync {
   ) {}
 
   start(intervalMs = 30_000): void {
+    if (!getApiBaseUrl()) {
+      return;
+    }
     this.stop();
     void this.syncOnce();
     this.timer = setInterval(() => void this.syncOnce(), intervalMs);
@@ -28,27 +32,35 @@ export class RewardSync {
   }
 
   async syncOnce(): Promise<void> {
-    const userId = this.getUserId();
-    const res = await fetchPendingRewards(userId);
-    if (!res.ok || !res.pending?.length) {
-      if (res.error && res.error !== 'stayon.apiBaseUrl not set') {
-        this.log(`Reward sync: ${res.error}`);
-      }
+    if (!getApiBaseUrl()) {
       return;
     }
 
-    const wallet = this.getWallet();
-    const transIds: string[] = [];
+    try {
+      const userId = this.getUserId();
+      const res = await fetchPendingRewards(userId);
+      if (!res.ok || !res.pending?.length) {
+        if (res.error && res.error !== 'stayon.apiBaseUrl not set') {
+          this.log(`Reward sync: ${res.error}`);
+        }
+        return;
+      }
 
-    for (const reward of res.pending) {
-      this.applyReward(wallet, reward);
-      transIds.push(reward.transId);
-    }
+      const wallet = this.getWallet();
+      const transIds: string[] = [];
 
-    await this.saveWallet();
-    const acked = await ackRewards(userId, transIds);
-    if (acked) {
-      this.log(`Synced ${transIds.length} CPX reward(s)`);
+      for (const reward of res.pending) {
+        this.applyReward(wallet, reward);
+        transIds.push(reward.transId);
+      }
+
+      await this.saveWallet();
+      const acked = await ackRewards(userId, transIds);
+      if (acked) {
+        this.log(`Synced ${transIds.length} CPX reward(s)`);
+      }
+    } catch (err) {
+      this.log(`Reward sync failed: ${String(err)}`);
     }
   }
 

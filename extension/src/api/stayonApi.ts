@@ -1,5 +1,7 @@
 import { getApiBaseUrl } from './config';
 
+const FETCH_TIMEOUT_MS = 8_000;
+
 export interface CpxWallResponse {
   ok: boolean;
   iframeUrl?: string;
@@ -21,6 +23,18 @@ export interface PendingResponse {
   error?: string;
 }
 
+async function fetchJson<T>(url: string, init?: RequestInit): Promise<T> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
+
+  try {
+    const res = await fetch(url, { ...init, signal: controller.signal });
+    return (await res.json()) as T;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 export async function fetchCpxWallUrl(
   userId: string,
   subId1?: string
@@ -36,10 +50,14 @@ export async function fetchCpxWallUrl(
   }
 
   try {
-    const res = await fetch(`${base.replace(/\/$/, '')}/api/cpx/wall?${qs.toString()}`);
-    return (await res.json()) as CpxWallResponse;
+    return await fetchJson<CpxWallResponse>(
+      `${base.replace(/\/$/, '')}/api/cpx/wall?${qs.toString()}`
+    );
   } catch (err) {
-    return { ok: false, error: String(err) };
+    const message = err instanceof Error && err.name === 'AbortError'
+      ? 'CPX wall request timed out'
+      : String(err);
+    return { ok: false, error: message };
   }
 }
 
@@ -50,10 +68,14 @@ export async function fetchPendingRewards(userId: string): Promise<PendingRespon
   }
 
   try {
-    const res = await fetch(`${base.replace(/\/$/, '')}/api/wallet/${encodeURIComponent(userId)}/pending`);
-    return (await res.json()) as PendingResponse;
+    return await fetchJson<PendingResponse>(
+      `${base.replace(/\/$/, '')}/api/wallet/${encodeURIComponent(userId)}/pending`
+    );
   } catch (err) {
-    return { ok: false, error: String(err) };
+    const message = err instanceof Error && err.name === 'AbortError'
+      ? 'Reward sync timed out'
+      : String(err);
+    return { ok: false, error: message };
   }
 }
 
@@ -64,12 +86,14 @@ export async function ackRewards(userId: string, transIds: string[]): Promise<bo
   }
 
   try {
-    const res = await fetch(`${base.replace(/\/$/, '')}/api/wallet/${encodeURIComponent(userId)}/ack`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ transIds }),
-    });
-    const data = (await res.json()) as { ok?: boolean };
+    const data = await fetchJson<{ ok?: boolean }>(
+      `${base.replace(/\/$/, '')}/api/wallet/${encodeURIComponent(userId)}/ack`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ transIds }),
+      }
+    );
     return Boolean(data.ok);
   } catch {
     return false;
