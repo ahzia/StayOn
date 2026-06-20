@@ -31,6 +31,11 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
   private view: vscode.WebviewView | undefined;
   private pendingMessages: ToWebviewMessage[] = [];
   private surveyProfile: SurveyProfileSnapshot = { completed: false };
+  private lastPostedState: { status: AgentStatus; contextNote: string; tool: string } = {
+    status: 'idle',
+    contextNote: '',
+    tool: '',
+  };
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -104,18 +109,22 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
   }
 
   onStateChange(status: AgentStatus, contextNote?: string, tool?: string): void {
-    if (status === 'idle' && this.shouldAutoPauseCpx()) {
+    if (status === 'idle' && this.taskSession.isSurveyPersisted()) {
       void this.pauseCpxSurvey();
       return;
     }
-    this.post({ type: 'state', status, contextNote, tool });
-  }
 
-  private shouldAutoPauseCpx(): boolean {
-    if (!this.taskSession.isCpxSurveyActive()) {
-      return false;
+    const note = contextNote ?? '';
+    const toolName = tool ?? '';
+    if (
+      this.lastPostedState.status === status &&
+      this.lastPostedState.contextNote === note &&
+      this.lastPostedState.tool === toolName
+    ) {
+      return;
     }
-    return this.taskSession.isSurveyPersisted() || this.taskSession.isCpxEngaged();
+    this.lastPostedState = { status, contextNote: note, tool: toolName };
+    this.post({ type: 'state', status, contextNote: note, tool: toolName });
   }
 
   private async pauseCpxSurvey(): Promise<void> {
@@ -143,6 +152,63 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
     if (reason) {
       this.log(reason);
     }
+  }
+
+  /** Stop current survey and open a fresh CPX wall to pick another. */
+  private async restartCpxSurvey(): Promise<void> {
+    const status = this.lastPostedState.status;
+    await clearPausedCpxSession(this.context);
+    this.taskSession.clearSurveyPersist();
+
+    if (!isCpxEnabled() || this.getMode() !== 'surveys') {
+      this.taskSession.reset();
+      this.post({ type: 'destroyCpxFrame' });
+      this.post({ type: 'cpxPaused', session: null });
+      this.post({ type: 'state', status: 'idle' });
+      return;
+    }
+
+    const freshWaitId = `browse-${Date.now()}`;
+    const cpxTask = await this.loadCpxTask(freshWaitId);
+    if (!cpxTask) {
+      this.taskSession.reset();
+      this.post({ type: 'destroyCpxFrame' });
+      this.post({ type: 'cpxPaused', session: null });
+      this.post({ type: 'state', status: 'idle' });
+      void vscode.window.showWarningMessage('Could not load a new survey list.');
+      return;
+    }
+
+    cpxTask.forceReload = true;
+    this.post({ type: 'destroyCpxFrame' });
+
+    if (status === 'busy') {
+      this.taskSession.reset();
+      this.taskSession.startWait('surveys', cpxTask);
+      this.taskSession.noteCpxEngaged();
+      this.post({ type: 'state', status: 'busy', contextNote: this.lastPostedState.contextNote });
+      this.post({ type: 'task', task: cpxTask });
+      this.post({ type: 'cpxPaused', session: null });
+      this.log('CPX survey stopped — fresh survey list loaded');
+      return;
+    }
+
+    this.taskSession.reset();
+    this.taskSession.setTask(cpxTask);
+    this.taskSession.noteCpxEngaged();
+
+    if (status === 'ready') {
+      this.post({
+        type: 'ready',
+        contextNote: this.lastPostedState.contextNote,
+        surveyPersist: false,
+      });
+    } else {
+      this.post({ type: 'state', status: 'idle' });
+    }
+    this.post({ type: 'task', task: cpxTask });
+    this.post({ type: 'cpxPaused', session: null });
+    this.log('CPX survey stopped — fresh survey list loaded');
   }
 
   private flushPendingMessages(): void {
@@ -362,8 +428,7 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
         break;
 
       case 'dismissSurvey':
-        await this.clearCpxSurvey('CPX survey stopped');
-        this.post({ type: 'state', status: 'idle' });
+        await this.restartCpxSurvey();
         break;
 
       case 'resumeSurvey': {

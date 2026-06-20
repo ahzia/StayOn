@@ -551,6 +551,12 @@ body {
   font-size: 12px;
 }
 
+.profile-tip {
+  font-size: 10px;
+  margin-top: 4px;
+  opacity: 0.8;
+}
+
 .profile-card {
   margin-bottom: 8px;
 }

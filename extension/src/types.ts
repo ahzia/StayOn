@@ -136,6 +136,8 @@ export interface CpxSurveyTask {
   inventoryType: 'cpx-wall';
   /** Restored from a paused session (same iframe URL, do not reload) */
   resumed?: boolean;
+  /** Load a new SurveyWall (discard in-progress survey) */
+  forceReload?: boolean;
 }
 
 export interface CpxPausedSession {

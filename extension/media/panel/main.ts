@@ -109,25 +109,34 @@ window.addEventListener('message', (event) => {
       cpxEnabled = Boolean(msg.cpxEnabled);
       surveyProfile = msg.surveyProfile ?? { completed: false };
       pausedCpxSession = msg.pausedCpxSession ?? null;
+      {
+        const saved = vscode.getState() as {
+          activeTab?: typeof activeTab;
+          surveyPersist?: boolean;
+          surveyActive?: boolean;
+          currentTask?: TaskPayload;
+          contextNote?: string;
+        } | null;
+        if (saved?.activeTab) activeTab = saved.activeTab;
+        if (saved?.surveyPersist) surveyPersist = saved.surveyPersist;
+        if (saved?.surveyActive) surveyActive = saved.surveyActive;
+        if (saved?.currentTask) currentTask = saved.currentTask;
+        if (saved?.contextNote) contextNote = saved.contextNote;
+      }
       render();
       break;
     case 'cpxPaused':
       pausedCpxSession = msg.session ?? null;
-      surveyPersist = false;
-      surveyActive = false;
-      if (!msg.session) {
-        currentTask = undefined;
+      if (msg.session) {
+        surveyPersist = false;
+        surveyActive = false;
       }
       persistUiState();
       render();
       break;
     case 'destroyCpxFrame':
       destroyCpxFrame();
-      currentTask = undefined;
-      surveyActive = false;
-      surveyPersist = false;
-      pausedCpxSession = null;
-      render();
+      syncCpxFrameAfterRender();
       break;
     case 'surveyProfile':
       surveyProfile = msg.profile ?? { completed: false };
@@ -137,6 +146,15 @@ window.addEventListener('message', (event) => {
       render();
       break;
     case 'state':
+      if (
+        status === msg.status &&
+        msg.status === 'busy' &&
+        isCpxWallTask(currentTask) &&
+        !surveyPersist &&
+        !surveyActive
+      ) {
+        break;
+      }
       status = msg.status;
       if (msg.contextNote) contextNote = msg.contextNote;
       if (status === 'idle' && !surveyActive) {
@@ -148,8 +166,17 @@ window.addEventListener('message', (event) => {
       currentTask = msg.task;
       activeTab = 'play';
       if (isCpxWallTask(currentTask)) {
-        surveyActive = status === 'idle' || Boolean(currentTask?.resumed);
+        if (currentTask?.forceReload) {
+          destroyCpxFrame();
+          surveyPersist = false;
+        }
+        surveyActive =
+          status === 'idle' ||
+          status === 'ready' ||
+          Boolean(currentTask?.resumed) ||
+          Boolean(currentTask?.forceReload);
       }
+      persistUiState();
       render();
       if (currentTask?.kind === 'cpx') {
         vscode.postMessage({ type: 'cpxEngaged' });
@@ -157,6 +184,10 @@ window.addEventListener('message', (event) => {
       break;
     case 'wallet':
       wallet = msg.wallet;
+      if (status === 'busy' && isCpxWallTask(currentTask) && activeTab === 'play') {
+        updateBalanceOnly();
+        break;
+      }
       render();
       break;
     case 'reward':
@@ -181,21 +212,21 @@ window.addEventListener('message', (event) => {
 });
 
 function persistUiState(): void {
-  const state = (vscode.getState() as Record<string, unknown> | undefined) ?? {};
-  vscode.setState({ ...state, surveyPersist, currentTask, contextNote });
+  vscode.setState({ activeTab, surveyPersist, surveyActive, currentTask, contextNote, pausedCpxSession });
 }
 
 function restoreUiState(): void {
   const state = vscode.getState() as {
     activeTab?: typeof activeTab;
     surveyPersist?: boolean;
+    surveyActive?: boolean;
     currentTask?: TaskPayload;
     contextNote?: string;
+    pausedCpxSession?: CpxPausedSession | null;
   } | undefined;
-  if (state?.activeTab) activeTab = state.activeTab;
-  if (state?.surveyPersist) surveyPersist = state.surveyPersist;
-  if (state?.currentTask) currentTask = state.currentTask;
-  if (state?.contextNote) contextNote = state.contextNote;
+  if (!state) return;
+  if (state.activeTab) activeTab = state.activeTab;
+  // Only restore survey UI from persisted state on webview reload — not every render.
 }
 
 function normalizeMode(raw: string | undefined): TaskMode {
@@ -213,8 +244,15 @@ function shouldShowCpxTask(): boolean {
   return Boolean(
     currentTask &&
       isCpxWallTask(currentTask) &&
-      (status === 'busy' || surveyPersist || surveyActive)
+      (status === 'busy' || status === 'ready' || surveyPersist || surveyActive)
   );
+}
+
+function detachCpxFrameBeforeRender(): void {
+  const frame = document.getElementById(CPX_FRAME_ID);
+  if (frame && frame.parentElement && frame.parentElement !== document.body) {
+    document.body.appendChild(frame);
+  }
 }
 
 function getOrCreateCpxFrame(): HTMLIFrameElement {
@@ -246,7 +284,7 @@ function mountCpxFrame(slot: HTMLElement | null): void {
     frame.style.display = 'block';
   } else {
     frame.style.display = 'none';
-    if (!frame.parentElement || frame.parentElement === document.body) {
+    if (frame.parentElement !== document.body) {
       document.body.appendChild(frame);
     }
   }
@@ -262,11 +300,24 @@ function syncCpxFrameAfterRender(): void {
     return;
   }
   const url = String(currentTask.iframeUrl ?? '');
+  if (!url) {
+    mountCpxFrame(null);
+    return;
+  }
   const resumed = Boolean(currentTask.resumed);
-  setCpxFrameUrl(url, !resumed);
+  const forceReload = Boolean(currentTask.forceReload);
+  setCpxFrameUrl(url, forceReload || !resumed);
   const slot = document.getElementById('cpx-slot');
   if (slot) {
     mountCpxFrame(slot);
+  } else {
+    // Slot missing — retry after DOM paint (e.g. right after destroyCpxFrame)
+    requestAnimationFrame(() => {
+      const retrySlot = document.getElementById('cpx-slot');
+      if (retrySlot && shouldShowCpxTask()) {
+        mountCpxFrame(retrySlot);
+      }
+    });
   }
 }
 
@@ -287,6 +338,15 @@ function celebrate(): void {
   });
 }
 
+function updateBalanceOnly(): void {
+  if (!wallet) return;
+  const balanceEl = document.querySelector('.balance');
+  const cashEl = document.querySelector('.cash');
+  if (balanceEl) balanceEl.textContent = formatPoints(wallet.tokens);
+  if (cashEl) cashEl.textContent = wallet.cashEstimate;
+  lastBalance = wallet.tokens;
+}
+
 function render(): void {
   if (!wallet) {
     app.innerHTML = '<p>Loading StayOn…</p>';
@@ -294,6 +354,7 @@ function render(): void {
   }
 
   restoreUiState();
+  detachCpxFrameBeforeRender();
 
   const balancePop = lastBalance >= 0 && wallet.tokens > lastBalance ? ' balance-pop' : '';
   lastBalance = wallet.tokens;
@@ -347,8 +408,9 @@ function renderTabContent(): string {
 
 function renderPlay(): string {
   const pinned = wallet!.activePerks?.includes('Context pinned');
-  const keepCpxVisible = shouldShowCpxTask() && (surveyPersist || surveyActive || status === 'busy');
-  const showFullReadyOverlay = status === 'ready' && !keepCpxVisible;
+  const showCpxWall = shouldShowCpxTask();
+  const agentReadyInline = status === 'ready' && showCpxWall && surveyPersist;
+  const showFullReadyOverlay = status === 'ready' && !showCpxWall;
 
   const agentHtml = showFullReadyOverlay
     ? `<div class="card ready-overlay card-enter ${pinned ? 'context-pinned' : ''}">
@@ -358,7 +420,7 @@ function renderPlay(): string {
         <p class="context">"${escapeHtml(contextNote || 'your coding task')}"</p>
         <button class="btn" id="dismiss-ready">Back to code</button>
       </div>`
-    : keepCpxVisible
+    : agentReadyInline
       ? `<div class="card agent-ready-inline card-enter ${pinned ? 'context-pinned' : ''}">
           <div class="ready-inline-row">
             <span class="ready-inline-title"><i class="codicon codicon-check"></i> Agent ready</span>
@@ -370,28 +432,28 @@ function renderPlay(): string {
           <span class="dot ${status === 'busy' ? 'pulse' : ''}"></span>
           <div>
             <div>${status === 'busy' ? 'Cursor is working' : status === 'ready' ? 'Agent finished' : 'Waiting for agent…'}</div>
-            ${contextNote && status !== 'ready' ? `<div class="context">"${escapeHtml(contextNote)}"</div>` : ''}
+            ${contextNote && status !== 'ready' && !showCpxWall ? `<div class="context">"${escapeHtml(contextNote)}"</div>` : ''}
           </div>
         </div>`;
 
   const showTask =
     currentTask &&
-    (status === 'busy' || keepCpxVisible) &&
-    (!isCpxWallTask(currentTask) || keepCpxVisible);
+    (!isCpxWallTask(currentTask) ? status === 'busy' : showCpxWall);
 
   const taskHtml = showTask
     ? renderTask(currentTask!)
-    : status === 'idle'
+    : status === 'idle' && !showCpxWall
       ? renderIdleOverview()
       : '';
 
-  const surveyStopHtml = keepCpxVisible
-    ? `<div class="survey-persist-actions">
+  const surveyStopHtml =
+    showCpxWall && isCpxWallTask(currentTask)
+      ? `<div class="survey-persist-actions">
         <button class="btn secondary" id="pause-survey">Pause survey</button>
-        <button class="btn secondary" id="stop-survey">Stop survey</button>
-        ${status === 'ready' ? '<button class="btn" id="back-to-code">Back to code</button>' : ''}
+        <button class="btn secondary" id="stop-survey" title="Discard this survey and pick another">New survey</button>
+        ${status === 'ready' && surveyPersist ? '<button class="btn" id="back-to-code">Back to code</button>' : ''}
       </div>`
-    : '';
+      : '';
 
   const challenge = wallet!.dailyChallenge;
   const challengeHtml =
@@ -439,7 +501,7 @@ function renderPausedSurveyCard(): string {
     <p class="context">Continue now or it will auto-resume on your next Agent prompt.</p>
     <div class="btn-row">
       <button class="btn" id="resume-survey">Continue survey</button>
-      <button class="btn secondary" id="stop-paused-survey">Discard survey</button>
+      <button class="btn secondary" id="stop-paused-survey">Start fresh survey list</button>
     </div>
   </div>`;
 }
@@ -469,6 +531,7 @@ function renderProfileSection(): string {
       </select>
       <label class="field-label">Country (optional)</label>
       <input class="field-input" type="text" id="profile-country" placeholder="US" maxlength="2" />
+      <p class="context profile-tip">Use your real country (must match your IP). US/UK/DE usually have the most surveys. Age 25–54 typical.</p>
       <div class="btn-row">
         <button class="btn" id="save-profile">Save profile</button>
         <button class="btn secondary" id="cancel-profile">Cancel</button>
@@ -530,7 +593,7 @@ function renderTask(task: TaskPayload): string {
     const persistNote = surveyPersist
       ? '<p class="context survey-persist-note">Agent finished — your place in the survey is kept. Pause anytime and continue on the next Agent wait.</p>'
       : surveyActive && status === 'idle'
-        ? '<p class="context survey-persist-note">Survey resumed — same session as before (not reloaded).</p>'
+        ? '<p class="context survey-persist-note">Pick a survey from the list below.</p>'
         : '<p class="context">Complete a real survey while the agent works. Long surveys can be paused and continued later.</p>';
 
     return `<div class="card cpx-card card-enter section-surveys">
@@ -649,9 +712,7 @@ function bindEvents(): void {
   });
 
   document.getElementById('stop-survey')?.addEventListener('click', () => {
-    surveyActive = false;
     surveyPersist = false;
-    currentTask = undefined;
     vscode.postMessage({ type: 'dismissSurvey' });
   });
 

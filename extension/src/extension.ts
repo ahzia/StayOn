@@ -10,7 +10,8 @@ import { defaultWallet, WALLET_KEY } from './gamification/wallet';
 import type { TaskMode, Wallet } from './types';
 import { normalizeMode } from './gamification/modes';
 import { formatPoints } from './brand/formatPoints';
-import { getOrCreateUserId } from './api/config';
+import { clearPausedCpxSession } from './gamification/cpxSession';
+import { getOrCreateUserId, resetSurveyIdentity } from './api/config';
 import { RewardSync } from './api/rewardSync';
 import { showHookVerifyUI, verifyHookSetup } from './setup/verifyHooks';
 
@@ -44,7 +45,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const taskSession = new TaskSession();
   const busyState = new BusyState();
-  const userId = getOrCreateUserId(context);
+  let userId = getOrCreateUserId(context);
 
   const panelProvider = new StayOnPanelProvider(
     context,
@@ -133,6 +134,28 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('stayon.verifyHooks', () => {
       const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       void showHookVerifyUI(root).then((r) => log(r.message));
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('stayon.resetSurveyIdentity', async () => {
+      const confirm = await vscode.window.showWarningMessage(
+        'Reset CPX survey identity? You get a new user ID with CPX (fixes “no surveys”). Re-save your survey profile after.',
+        { modal: true },
+        'Reset'
+      );
+      if (confirm !== 'Reset') {
+        return;
+      }
+      const prev = userId;
+      userId = await resetSurveyIdentity(context);
+      await clearPausedCpxSession(context);
+      taskSession.reset();
+      log(`Survey identity reset: ${prev} → ${userId}`);
+      void vscode.window.showInformationMessage(
+        'StayOn survey identity reset. Open the panel and set up your survey profile again.'
+      );
+      void panelProvider.showPanel(true);
     })
   );
 

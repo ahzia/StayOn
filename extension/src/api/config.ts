@@ -13,6 +13,12 @@ export function getOrCreateUserId(context: vscode.ExtensionContext): string {
   return userId;
 }
 
+export async function resetSurveyIdentity(context: vscode.ExtensionContext): Promise<string> {
+  const userId = crypto.randomUUID();
+  await context.globalState.update(USER_ID_KEY, userId);
+  return userId;
+}
+
 /** User setting → package.json default → bundled release URL */
 export function getApiBaseUrl(): string | undefined {
   const cfg = vscode.workspace.getConfiguration('stayon');

@@ -20,8 +20,8 @@ type ProfileBody = {
 
 function validateBody(body: ProfileBody): string | null {
   const email = body.email?.trim().toLowerCase() ?? '';
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return 'Valid email required';
+  if (!email || !/^[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$/i.test(email)) {
+    return 'Valid email required (no commas or spaces)';
   }
 
   const year = Number(body.birthdayYear);

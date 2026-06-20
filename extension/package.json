@@ -42,6 +42,10 @@
       {
         "command": "stayon.showOutput",
         "title": "StayOn: Show Debug Output"
+      },
+      {
+        "command": "stayon.resetSurveyIdentity",
+        "title": "StayOn: Reset Survey Identity (new CPX user)"
       }
     ],
     "configuration": {

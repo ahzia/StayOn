@@ -58,10 +58,11 @@ export class BusyState {
     switch (event.event) {
       case 'busy_start':
         this.clearReadyTimer();
+        const wasIdle = this.ref === 0;
         this.ref = Math.max(1, this.ref);
         this.contextNote = event.context_note ?? '';
         this.setStatus('busy');
-        if (this.ref === 1) {
+        if (wasIdle) {
           for (const fn of this.onBusyStart) {
             fn();
           }
@@ -71,10 +72,10 @@ export class BusyState {
       case 'busy_heartbeat':
         if (this.status !== 'idle') {
           this.ref = Math.max(1, this.ref);
-          if ('tool' in event && event.tool) {
+          if ('tool' in event && event.tool && event.tool !== this.lastTool) {
             this.lastTool = event.tool;
+            this.notifyState();
           }
-          this.notifyState();
         }
         break;
 
