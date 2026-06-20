@@ -18,6 +18,7 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'stayon.panel';
 
   private view: vscode.WebviewView | undefined;
+  private pendingMessages: ToWebviewMessage[] = [];
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -51,18 +52,40 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
     });
 
     this.postInit();
+    this.flushPendingMessages();
   }
 
-  showPanel(focus = true): void {
+  async showPanel(focus = true): Promise<void> {
+    // Open StayOn activity bar container (creates webview if first time)
+    try {
+      await vscode.commands.executeCommand('workbench.view.extension.stayon');
+    } catch {
+      // ignore — container id may differ in some hosts
+    }
+
     if (this.view) {
       this.view.show?.(focus);
     } else {
-      void vscode.commands.executeCommand('stayon.panel.focus');
+      try {
+        await vscode.commands.executeCommand('stayon.panel.focus');
+      } catch {
+        this.log('Could not focus StayOn panel — click the StayOn icon in the activity bar');
+      }
     }
   }
 
   onBusyStart(): void {
     void this.startBusySession();
+  }
+
+  private flushPendingMessages(): void {
+    if (!this.view || this.pendingMessages.length === 0) {
+      return;
+    }
+    for (const message of this.pendingMessages) {
+      void this.view.webview.postMessage(message);
+    }
+    this.pendingMessages = [];
   }
 
   private async startBusySession(): Promise<void> {
@@ -75,7 +98,7 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
     }
 
     // Show panel immediately — never block on CPX network
-    this.showPanel(true);
+    await this.showPanel(true);
     this.post({ type: 'state', status: 'busy' });
     this.post({ type: 'task', task });
     this.postWallet();
@@ -150,7 +173,11 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
   }
 
   private post(message: ToWebviewMessage): void {
-    void this.view?.webview.postMessage(message);
+    if (this.view) {
+      void this.view.webview.postMessage(message);
+      return;
+    }
+    this.pendingMessages.push(message);
   }
 
   private async handleMessage(msg: FromWebviewMessage): Promise<void> {

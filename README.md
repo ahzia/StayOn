@@ -22,7 +22,10 @@ npm run compile
 
 1. Open the **StayOn repo root** (this folder) in Cursor — not just `extension/`.
 2. Press **F5** (Run StayOn Extension) — uses `.vscode/launch.json` at repo root.
-3. In the **Extension Development Host** window, open this same repo folder again.
+3. A **second window** opens with folder **`.worktrees/ext-dev`** (not the same path — avoids Cursor merging/closing both windows).
+4. Run Agent + test StayOn **only in that second window**.
+
+> **Why two folders?** Cursor treats two windows on the same path as one workspace. See [docs/14_extension_dev_workflow.md](docs/14_extension_dev_workflow.md).
 
 ### 4. Trust Cursor hooks (required once)
 

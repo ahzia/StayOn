@@ -9,7 +9,8 @@ export const ECONOMY = {
   SPONSORED_VIEW: 5,
   SPONSORED_CLICK: 50,
   FOCUS_REWARD: 12,
-  LEARN_REWARD: 10,
+  /** Learn mode — engagement only; paid CPX tasks are 50–500+ ⭐ */
+  LEARN_REWARD: 1,
 } as const;
 
 export function cashEstimate(tokens: number): string {

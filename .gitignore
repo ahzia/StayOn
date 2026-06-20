@@ -34,5 +34,9 @@ web/node_modules/
 .idea/
 *.swp
 
+# Extension dev host (separate window — see docs/14_extension_dev_workflow.md)
+.worktrees/
+.vscode-ext-dev-profile/
+
 # Local StayOn runtime (user machine, not project)
 # ~/.stayon/ lives outside repo — listed here for clarity only

@@ -2,6 +2,19 @@
   "version": "2.0.0",
   "tasks": [
     {
+      "type": "shell",
+      "label": "ensure-ext-dev-worktree",
+      "command": "${workspaceFolder}/scripts/ensure-ext-dev-worktree.sh",
+      "options": { "cwd": "${workspaceFolder}" },
+      "problemMatcher": []
+    },
+    {
+      "label": "stayon: prelaunch",
+      "dependsOn": ["npm: compile", "ensure-ext-dev-worktree"],
+      "dependsOrder": "sequence",
+      "problemMatcher": []
+    },
+    {
       "type": "npm",
       "script": "compile",
       "path": "extension",

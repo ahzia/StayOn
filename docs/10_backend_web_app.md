@@ -74,6 +74,21 @@ Backend forwards `ip_user`, `user_agent`, builds `secure_hash`, returns sanitize
 
 ---
 
+### Phase G — Learn content API (backend contributor)
+
+Learn questions served from backend; extension integrates via HTTP when ready.
+
+| Route | Purpose |
+|-------|---------|
+| `GET /api/learn/task` | One flashcard/quiz per wait ( **1 point ⭐** ) |
+| `POST /api/learn/tasks` | Admin bulk import (optional) |
+
+**Docs:** [12_backend_developer_guide.md](./12_backend_developer_guide.md), [13_learn_api_contract.md](./13_learn_api_contract.md)
+
+Backend work does **not** require extension changes until integration PR.
+
+---
+
 ## Deployment (Vercel)
 
 ```bash
