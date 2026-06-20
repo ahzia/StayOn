@@ -1,0 +1,32 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Secrets (API keys, CPX/BitLabs/Tremendous — never commit)
+.env
+.env.*
+!.env.example
+
+# Dependencies (any package at repo root or future api/)
+node_modules/
+
+# Build outputs
+dist/
+out/
+*.vsix
+
+# Extension webview bundle (rebuilt via `npm run compile` in extension/)
+extension/media/panel/main.js
+extension/media/panel/main.js.map
+extension/dist/
+
+# Local / IDE (optional user overrides)
+.idea/
+*.swp
+
+# Local StayOn runtime (user machine, not project)
+# ~/.stayon/ lives outside repo — listed here for clarity only
