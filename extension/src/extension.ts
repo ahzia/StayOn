@@ -16,6 +16,8 @@ import { deleteSurveyProfile } from './api/stayonApi';
 import { RewardSync } from './api/rewardSync';
 import { showHookVerifyUI, verifyHookSetup } from './setup/verifyHooks';
 import { showInstallHooksUI } from './setup/installHooks';
+import { maybePromptSetup, showStayOnSetupUI } from './setup/setupFlow';
+import { showTestHookBridgeUI } from './setup/testBridge';
 
 let outputChannel: vscode.OutputChannel;
 let bridge: BridgeServer | undefined;
@@ -144,9 +146,23 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   context.subscriptions.push(
+    vscode.commands.registerCommand('stayon.setup', () => {
+      const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      void showStayOnSetupUI(context.extensionUri, root, log);
+    })
+  );
+
+  context.subscriptions.push(
     vscode.commands.registerCommand('stayon.installHooks', () => {
       const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       void showInstallHooksUI(context.extensionUri, root).then((r) => log(r.message));
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('stayon.testHookBridge', () => {
+      const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      void showTestHookBridgeUI(root, log);
     })
   );
 
@@ -175,8 +191,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   const verify = root ? verifyHookSetup(root) : null;
-  if (verify && !verify.hookScriptExecutable) {
-    log('Hook setup incomplete — run "StayOn: Verify Hook Setup"');
+  const hooksReady =
+    verify &&
+    verify.hooksJsonExists &&
+    verify.hookScriptExists &&
+    (verify.usesNodeHook || verify.hookScriptExecutable);
+  if (verify && !hooksReady) {
+    log('Hook setup incomplete — run "StayOn: Set Up"');
+    void maybePromptSetup(context, context.extensionUri, root, log);
   }
 
   log('StayOn activated');

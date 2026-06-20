@@ -82,14 +82,20 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
       // ignore
     }
 
+    // WebviewView is created lazily — wait briefly after opening the container.
+    for (let i = 0; i < 20 && !this.view; i++) {
+      await new Promise((resolve) => setTimeout(resolve, 50));
+    }
+
     if (this.view) {
       this.view.show?.(focus);
-    } else {
-      try {
-        await vscode.commands.executeCommand('stayon.panel.focus');
-      } catch {
-        this.log('Could not focus StayOn panel — click the StayOn icon in the activity bar');
-      }
+      return;
+    }
+
+    try {
+      await vscode.commands.executeCommand('stayon.panel.focus');
+    } catch {
+      this.log('Could not focus StayOn panel — click the StayOn icon in the activity bar once, then retry');
     }
   }
 

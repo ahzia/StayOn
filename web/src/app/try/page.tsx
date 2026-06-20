@@ -64,7 +64,7 @@ export default async function TryPage() {
           <h2 className="text-xl font-medium text-brand">1. Install extension</h2>
           <Card className="space-y-2 text-sm text-muted">
             <p>
-              Download <strong className="text-foreground">stayon-0.1.0.vsix</strong> from the
+              Download <strong className="text-foreground">stayon-0.1.1.vsix</strong> from the
               release link your team shares (or build from repo).
             </p>
             <p>Cursor → Extensions → <code>...</code> → Install from VSIX → reload.</p>
@@ -72,14 +72,13 @@ export default async function TryPage() {
         </section>
 
         <section className="space-y-3">
-          <h2 className="text-xl font-medium text-brand">2. Install hooks (required)</h2>
+          <h2 className="text-xl font-medium text-brand">2. One-time setup</h2>
           <Card className="space-y-2 text-sm text-muted">
             <p>
-              <strong className="text-foreground">Cmd+Shift+P</strong> →{' '}
-              <strong>StayOn: Install Hooks in Workspace</strong>
+              Open your project folder, then <strong className="text-foreground">Cmd+Shift+P</strong>{' '}
+              (Ctrl+Shift+P on Windows) → <strong>StayOn: Set Up</strong>
             </p>
-            <p>Then Cursor Settings → Hooks → <strong>Trust</strong> StayOn hooks.</p>
-            <p>Run <strong>StayOn: Verify Hook Setup</strong> to confirm.</p>
+            <p>No bash or jq — works on Windows and Mac. Then submit an Agent prompt.</p>
           </Card>
         </section>
 

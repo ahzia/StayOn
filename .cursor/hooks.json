@@ -1,13 +1,13 @@
 {
   "version": 1,
   "hooks": {
-    "beforeSubmitPrompt": [{ "command": ".cursor/hooks/stayon-event.sh" }],
-    "preToolUse": [{ "command": ".cursor/hooks/stayon-event.sh" }],
-    "postToolUse": [{ "command": ".cursor/hooks/stayon-event.sh" }],
-    "afterAgentThought": [{ "command": ".cursor/hooks/stayon-event.sh" }],
-    "subagentStart": [{ "command": ".cursor/hooks/stayon-event.sh" }],
-    "subagentStop": [{ "command": ".cursor/hooks/stayon-event.sh" }],
-    "stop": [{ "command": ".cursor/hooks/stayon-event.sh" }],
-    "sessionEnd": [{ "command": ".cursor/hooks/stayon-event.sh" }]
+    "beforeSubmitPrompt": [{ "command": "bash .cursor/hooks/stayon-event.sh" }],
+    "preToolUse": [{ "command": "bash .cursor/hooks/stayon-event.sh" }],
+    "postToolUse": [{ "command": "bash .cursor/hooks/stayon-event.sh" }],
+    "afterAgentThought": [{ "command": "bash .cursor/hooks/stayon-event.sh" }],
+    "subagentStart": [{ "command": "bash .cursor/hooks/stayon-event.sh" }],
+    "subagentStop": [{ "command": "bash .cursor/hooks/stayon-event.sh" }],
+    "stop": [{ "command": "bash .cursor/hooks/stayon-event.sh" }],
+    "sessionEnd": [{ "command": "bash .cursor/hooks/stayon-event.sh" }]
   }
 }

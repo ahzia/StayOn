@@ -9,50 +9,34 @@ Full ship plan: [20_ship_and_lifecycle_plan.md](./20_ship_and_lifecycle_plan.md)
 ## What you need
 
 - **Cursor** with Agent + Hooks enabled
-- **macOS** recommended (agent-ready chime/focus tested there)
-- ~15 minutes for first-time setup
+- **Windows or macOS** (v0.1.1+ uses Node hooks — no bash/jq install)
+- ~5 minutes for first-time setup
 
 ---
 
 ## 1. Install StayOn
 
-1. Download **`stayon-0.1.0.vsix`** from the release link your host sent you.
+1. Download **`stayon-0.1.1.vsix`** from the release link your host sent you.
 2. In Cursor: **Extensions** → **`...`** menu → **Install from VSIX...**
 3. Reload Cursor if prompted.
 4. You should see **StayOn** in the activity bar.
 
 ---
 
-## 2. Enable hooks (required)
+## 2. One-time setup (required)
 
-StayOn only opens when the **Cursor Agent** is working. That uses project hooks.
+StayOn only opens when the **Cursor Agent** is working. That uses small project hooks.
 
-**Option A — StayOn repo (easiest if you have the repo)**
+1. **File → Open Folder** — open the project you code in (any folder).
+2. **Cmd+Shift+P** (Ctrl+Shift+P on Windows) → **StayOn: Set Up**
+3. Click **Set Up StayOn** — installs hooks and runs a self-test (no bash, no jq).
+4. Submit a **Cursor Agent** prompt — the panel should open automatically.
 
-The project already contains `.cursor/hooks.json` and `.cursor/hooks/stayon-event.sh`.
+If setup fails, run **StayOn: Test Hook Bridge** and check **`~/.stayon/hook.log`** (Windows: `%USERPROFILE%\.stayon\hook.log`).
 
-```bash
-chmod +x .cursor/hooks/stayon-event.sh
-```
+**Windows:** Node.js must be on PATH (install from [nodejs.org](https://nodejs.org) if **Set Up** says Node not found). Git Bash is **not** required on v0.1.1+.
 
-**Option B — Your own project**
-
-Copy from the StayOn repo into **your project root**:
-
-- `.cursor/hooks.json`
-- `.cursor/hooks/stayon-event.sh`
-
-Then:
-
-```bash
-chmod +x .cursor/hooks/stayon-event.sh
-```
-
-**Trust hooks in Cursor**
-
-1. **Cursor Settings → Hooks**
-2. **Trust** the StayOn hook entries
-3. Run command: **StayOn: Verify Hook Setup** — should report OK
+**Survey profile** (step 4 below) is optional for opening the panel — only needed for CPX paid surveys.
 
 ---
 
@@ -101,7 +85,7 @@ Or in `settings.json`:
 
 | Problem | Try |
 |---------|-----|
-| Panel never opens on Agent | Trust hooks; run **StayOn: Verify Hook Setup**; check **StayOn: Show Debug Output** |
+| Panel never opens on Agent | Run **StayOn: Set Up** again; **StayOn: Test Hook Bridge**; check **StayOn: Show Debug Output** for `Agent busy (hook)` |
 | No surveys listed | **StayOn: Reset Survey Identity**; fix profile email; use external browser |
 | Points not updating | Confirm `stayon.apiBaseUrl`; wait 30s; check output channel |
 | Survey bounces in panel | Use **Open in browser** instead of in-panel list |
