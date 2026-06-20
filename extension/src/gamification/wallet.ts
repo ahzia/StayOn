@@ -8,6 +8,7 @@ export function defaultWallet(): Wallet {
   const today = todayStr();
   return {
     tokens: 0,
+    lastServerEarnedPoints: 0,
     totalXp: 0,
     level: 1,
     dailyStreak: 0,

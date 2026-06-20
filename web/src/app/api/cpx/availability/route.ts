@@ -18,7 +18,7 @@ export async function GET(request: Request) {
   }
 
   const { appId, secret } = getCpxConfig();
-  const profile = getProfile(userId);
+  const profile = await getProfile(userId);
   const secureHash = cpxSecureHash(userId, secret);
 
   const ip =

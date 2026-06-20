@@ -33,6 +33,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const saved = context.globalState.get<Wallet>(WALLET_KEY);
   let wallet: Wallet = saved ? { ...defaultWallet(), ...saved } : defaultWallet();
+  if (wallet.lastServerEarnedPoints === undefined) {
+    wallet.lastServerEarnedPoints = 0;
+  }
   const saveWallet = async () => {
     await context.globalState.update(WALLET_KEY, wallet);
   };
@@ -68,6 +71,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       panelProvider.postReward(tokens, label);
       panelProvider.onCpxRewardSynced();
     },
+    () => panelProvider.postWallet(),
     log
   );
   rewardSync.start();

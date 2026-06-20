@@ -21,8 +21,8 @@ export async function GET(request: Request) {
   }
 
   const { appId, secret } = getCpxConfig();
-  const stored = getProfile(userId);
-  const profileComplete = isProfileComplete(userId);
+  const stored = await getProfile(userId);
+  const profileComplete = await isProfileComplete(userId);
 
   const iframeUrl = buildSurveyWallUrl({
     appId,

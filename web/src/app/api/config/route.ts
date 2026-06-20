@@ -1,4 +1,6 @@
 import { NextResponse } from 'next/server';
+import { isCpxConfigured } from '@/lib/env';
+import { useSupabaseStorage } from '@/lib/storage';
 
 export const dynamic = 'force-dynamic';
 
@@ -13,7 +15,8 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     apiBaseUrl,
-    cpxSurveys: true,
+    cpxSurveys: isCpxConfigured(),
     learnEnabled: true,
+    storageBackend: useSupabaseStorage() ? 'supabase' : 'json',
   });
 }

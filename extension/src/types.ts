@@ -26,6 +26,8 @@ export interface DailyChallenge {
 
 export interface Wallet {
   tokens: number;
+  /** Last known CPX/server earned balance — used to apply deltas without double credit */
+  lastServerEarnedPoints?: number;
   totalXp: number;
   level: number;
   dailyStreak: number;

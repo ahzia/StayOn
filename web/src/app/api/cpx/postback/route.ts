@@ -55,20 +55,23 @@ export async function GET(request: Request) {
     }
   }
 
-  const entry = upsertPostback({
-    transId: params.transId,
-    userId: params.userId,
-    status: ledgerStatus,
-    cpxStatus: params.status,
-    type: params.type,
-    amountUsd: params.amountUsd,
-    amountLocal: params.amountLocal,
-    tokens,
-    offerId: params.offerId,
-    subId1: params.subId1,
-    subId2: params.subId2,
-    ipClick: params.ipClick,
-  });
+  const entry = await upsertPostback(
+    {
+      transId: params.transId,
+      userId: params.userId,
+      status: ledgerStatus,
+      cpxStatus: params.status,
+      type: params.type,
+      amountUsd: params.amountUsd,
+      amountLocal: params.amountLocal,
+      tokens,
+      offerId: params.offerId,
+      subId1: params.subId1,
+      subId2: params.subId2,
+      ipClick: params.ipClick,
+    },
+    userShare
+  );
 
   return NextResponse.json({
     ok: true,

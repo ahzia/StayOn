@@ -13,8 +13,8 @@ export async function GET(
     return NextResponse.json({ ok: false, error: 'userId required' }, { status: 400 });
   }
 
-  const pending = getPendingForUser(userId);
-  const summary = getUserSummary(userId);
+  const pending = await getPendingForUser(userId);
+  const summary = await getUserSummary(userId);
 
   return NextResponse.json({
     ok: true,

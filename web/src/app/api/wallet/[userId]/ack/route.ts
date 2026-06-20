@@ -21,7 +21,7 @@ export async function POST(
   }
 
   const transIds = body.transIds ?? [];
-  const synced = markSynced(userId, transIds);
+  const synced = await markSynced(userId, transIds);
 
   return NextResponse.json({ ok: true, synced });
 }

@@ -25,6 +25,27 @@ export interface PendingResponse {
   error?: string;
 }
 
+export interface WalletSummaryEvent {
+  id: string;
+  transId: string;
+  points: number;
+  label: string;
+  status: string;
+  createdAt: string;
+  synced: boolean;
+}
+
+export interface WalletSummaryResponse {
+  ok: boolean;
+  availablePoints?: number;
+  pendingPoints?: number;
+  lifetimeEarnedPoints?: number;
+  lifetimeRedeemedPoints?: number;
+  cashEstimate?: string;
+  recentEvents?: WalletSummaryEvent[];
+  error?: string;
+}
+
 export interface ProfileResponse {
   ok: boolean;
   completed?: boolean;
@@ -154,6 +175,24 @@ export async function deleteSurveyProfile(userId: string): Promise<boolean> {
     return Boolean(data.ok);
   } catch {
     return false;
+  }
+}
+
+export async function fetchWalletSummary(userId: string): Promise<WalletSummaryResponse> {
+  const base = apiBase();
+  if (!base) {
+    return { ok: false, error: 'stayon.apiBaseUrl not set' };
+  }
+
+  try {
+    return await fetchJson<WalletSummaryResponse>(
+      `${base}/api/wallet/${encodeURIComponent(userId)}/summary`
+    );
+  } catch (err) {
+    const message = err instanceof Error && err.name === 'AbortError'
+      ? 'Wallet summary timed out'
+      : String(err);
+    return { ok: false, error: message };
   }
 }
 

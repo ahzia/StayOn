@@ -60,8 +60,8 @@ export async function GET(
     return NextResponse.json({ ok: false, error: 'userId required' }, { status: 400 });
   }
 
-  const profile = getProfile(userId);
-  const completed = isProfileComplete(userId);
+  const profile = await getProfile(userId);
+  const completed = await isProfileComplete(userId);
 
   return NextResponse.json({
     ok: true,
@@ -99,7 +99,7 @@ export async function POST(
     return NextResponse.json({ ok: false, error }, { status: 400 });
   }
 
-  const record = saveProfile(userId, {
+  const record = await saveProfile(userId, {
     email: body.email!.trim().toLowerCase(),
     birthdayYear: Number(body.birthdayYear),
     birthdayMonth: Number(body.birthdayMonth),
@@ -131,6 +131,6 @@ export async function DELETE(
     return NextResponse.json({ ok: false, error: 'userId required' }, { status: 400 });
   }
 
-  const removed = deleteProfile(userId);
+  const removed = await deleteProfile(userId);
   return NextResponse.json({ ok: true, removed });
 }
