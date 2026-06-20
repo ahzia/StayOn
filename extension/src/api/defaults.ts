@@ -5,4 +5,4 @@
  * After deploying `web/` (Vercel etc.), set this to your public URL, e.g.
  * `https://stayon.vercel.app`
  */
-export const BUNDLED_API_BASE_URL = '';
+export const BUNDLED_API_BASE_URL = 'https://stay-on-nu.vercel.app';

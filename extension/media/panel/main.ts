@@ -93,6 +93,8 @@ let pausedCpxSession: CpxPausedSession | null = null;
 let activeTab: 'play' | 'wallet' | 'stats' = 'play';
 let currentTask: TaskPayload | undefined;
 let lastBalance = -1;
+let extensionUserId = '';
+let apiBaseUrl = '';
 
 const CPX_FRAME_ID = 'stayon-cpx-frame';
 const CPX_HOST_ID = 'cpx-host';
@@ -111,6 +113,8 @@ window.addEventListener('message', (event) => {
       cpxEnabled = Boolean(msg.cpxEnabled);
       surveyProfile = msg.surveyProfile ?? { completed: false };
       pausedCpxSession = msg.pausedCpxSession ?? null;
+      extensionUserId = msg.extensionUserId ?? extensionUserId;
+      apiBaseUrl = msg.apiBaseUrl ?? apiBaseUrl;
       {
         const saved = vscode.getState() as {
           activeTab?: typeof activeTab;
@@ -677,7 +681,9 @@ function renderWallet(): string {
           : '<p class="context">Complete a wait-task to earn points.</p>'
       }
     </div>
-    <button class="btn secondary" disabled>Redeem cash (min 5,000 ${formatPoints(5000, true)} — coming soon)</button>`;
+    <button class="btn secondary" id="open-earnings">View earnings online</button>
+    <p class="context wallet-id-hint">Your ID: <code class="user-id">${escapeHtml(extensionUserId || '…')}</code></p>
+    <button class="btn secondary" disabled>Claim payout — coming after beta</button>`;
 }
 
 function renderStats(): string {
@@ -734,6 +740,10 @@ function bindEvents(): void {
 
   document.getElementById('dismiss-ready')?.addEventListener('click', () => {
     vscode.postMessage({ type: 'pauseSurvey' });
+  });
+
+  document.getElementById('open-earnings')?.addEventListener('click', () => {
+    vscode.postMessage({ type: 'openEarnings' });
   });
 
   document.getElementById('open-cpx-browser')?.addEventListener('click', () => {

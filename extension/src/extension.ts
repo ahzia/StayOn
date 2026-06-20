@@ -15,6 +15,7 @@ import { getOrCreateUserId, resetSurveyIdentity } from './api/config';
 import { deleteSurveyProfile } from './api/stayonApi';
 import { RewardSync } from './api/rewardSync';
 import { showHookVerifyUI, verifyHookSetup } from './setup/verifyHooks';
+import { showInstallHooksUI } from './setup/installHooks';
 
 let outputChannel: vscode.OutputChannel;
 let bridge: BridgeServer | undefined;
@@ -139,6 +140,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('stayon.verifyHooks', () => {
       const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
       void showHookVerifyUI(root).then((r) => log(r.message));
+    })
+  );
+
+  context.subscriptions.push(
+    vscode.commands.registerCommand('stayon.installHooks', () => {
+      const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      void showInstallHooksUI(context.extensionUri, root).then((r) => log(r.message));
     })
   );
 

@@ -53,12 +53,19 @@ export default function HomePage() {
               <InlineCode>stayon.apiBaseUrl</InlineCode> in the extension.
             </li>
           </ol>
-          <Button href="/setup">Full setup guide →</Button>
+          <Button href="/try">Try StayOn (MEGATHON) →</Button>
+          <Button href="/setup" variant="secondary">Full setup guide →</Button>
         </Card>
 
-        <footer className="text-sm text-subtle-text">
-          Backend postback: <InlineCode>/api/cpx/postback</InlineCode> · Survey wall:{' '}
-          <InlineCode>/api/cpx/wall</InlineCode>
+        <footer className="flex flex-wrap gap-4 text-sm text-subtle-text">
+          <span>
+            <a href="/try" className="text-brand hover:underline">Try</a> ·{' '}
+            <a href="/earnings" className="text-brand hover:underline">Earnings</a> ·{' '}
+            <a href="/setup" className="text-brand hover:underline">Setup</a>
+          </span>
+          <span>
+            API: <InlineCode>/api/cpx/postback</InlineCode> · <InlineCode>/api/stats/summary</InlineCode>
+          </span>
         </footer>
       </div>
     </main>

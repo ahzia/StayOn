@@ -202,57 +202,63 @@ See [13_learn_api_contract.md](./13_learn_api_contract.md).
 
 ---
 
-## Phase 5 — Redeem / payouts (1–2 weeks)
+## Phase 5 — Claim payout (Mollie — hackathon priority)
 
-**Goal:** User converts ⭐ to real money (gift card / PayPal).
+**Goal:** User claims confirmed ⭐ balance via **Mollie** payout layer (sandbox OK for MEGATHON judges).
 
-### 5.1 Provider
+See [19_02_possiblities_trucks.md](./19_02_possiblities_trucks.md), [20_ship_and_lifecycle_plan.md](./20_ship_and_lifecycle_plan.md) P2.
 
-Start with [Tremendous sandbox](https://developers.tremendous.com) per [06_real_monetization_playbook.md](./06_real_monetization_playbook.md) §5.1.
+### 5.1 Provider (primary: Mollie)
+
+1. Create [Mollie](https://www.mollie.com) account (MEGATHON Startup Track requirement)
+2. Use **test API key** for demo
+3. Optional stronger story: Mollie Connect for marketplace-style payouts
 
 Env:
 
 ```bash
-TREMENDOUS_API_KEY=
-TREMENDOUS_FUNDING_SOURCE_ID=
-TREMENDOUS_SANDBOX=true
+MOLLIE_API_KEY=test_...
+MOLLIE_PROFILE_ID=...
 ```
 
 ### 5.2 API
 
-**`POST /api/redeem`** (requires auth)
+**`POST /api/claim`** (auth optional for hackathon MVP; required for production)
 
 ```json
-{ "points": 5000, "method": "tremendous_gift_card", "productId": "…" }
+{ "extensionUserId": "uuid", "points": 5000 }
 ```
 
 Server:
 
-1. Verify `available_points >= points` and `points >= REDEEM_MIN`.
-2. Transaction: debit balance, insert `payout_requests`.
-3. Call Tremendous `POST /orders`.
-4. Store `provider_order_id`; update status on webhook.
+1. Verify `available_points >= points` and `points >= CLAIM_MIN`.
+2. Transaction: debit `user_balances`, insert `payout_requests` with `provider = 'mollie'`.
+3. Create Mollie payment / payout (test mode).
+4. Webhook updates `payout_requests.status` → `paid`.
 
-**`POST /api/webhooks/tremendous`** — verify signature, update `payout_requests`.
+**`POST /api/webhooks/mollie`** — verify signature, update `payout_requests`.
 
-### 5.3 Extension UI
+### 5.3 Dashboard + extension UI
 
-Enable Wallet tab button (currently stub in `extension/media/panel/main.ts`):
+- Web: show **pending → confirmed → claimable → paid** (see [19_possiblities.md](./19_possiblities.md))
+- Extension Wallet: enable **Claim payout** button → web claim flow
 
-- “Redeem” → open web dashboard or in-panel email confirm → calls redeem API.
+### 5.4 Alternative: Tremendous (Phase 5b)
 
-### 5.4 Compliance checklist
+For US gift cards post-hackathon, see [06_real_monetization_playbook.md](./06_real_monetization_playbook.md) §5.1 — `POST /api/redeem` with Tremendous orders.
 
-- [ ] Minimum redeem high enough to cover provider fees
-- [ ] Terms of service / “points have no cash value until redeem”
-- [ ] Payout email matches account
-- [ ] Fraud: velocity limits on redeem + new accounts
+### 5.5 Compliance checklist
 
-### 5.5 Acceptance
+- [ ] Minimum claim threshold covers Mollie fees
+- [ ] Terms: points have no cash value until claimed
+- [ ] Earned-only (CPX); exclude Learn/perks
+- [ ] Fraud: velocity limits on new accounts
 
-- [ ] Sandbox Tremendous order completes
+### 5.6 Acceptance
+
+- [ ] Mollie sandbox claim completes
 - [ ] Balance debited exactly once
-- [ ] Failed order rolls back or marks `failed` without double debit
+- [ ] `payout_requests` row visible in Supabase dashboard for demo
 
 ---
 
@@ -277,7 +283,8 @@ Keep changes reviewable:
 | **PR 3** | JSON migration script + deploy docs |
 | **PR 4** | `GET /wallet/summary` + extension sync refactor |
 | **PR 5** | Supabase Auth + link flow + dashboard skeleton |
-| **PR 6** | Tremendous redeem (sandbox) |
+| **PR 6** | Mollie claim sandbox + dashboard wallet states |
+| **PR 7** | Tremendous redeem (optional, post-hackathon) |
 
 ---
 

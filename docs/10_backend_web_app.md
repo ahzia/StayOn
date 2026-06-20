@@ -32,14 +32,16 @@ Storage: JSON file ledger at `web/.data/ledger.json` (dev / self-hosted).
 
 ### Phase B — Persistent database
 
-Replace JSON ledger with Postgres (Vercel Postgres or Supabase):
+- [x] Next.js app with Supabase (`STORAGE_BACKEND=supabase`)
+- [x] Schema: `extension_installs`, `survey_profiles`, `reward_events`, `user_balances`
+- [x] Extension sync via `GET /api/wallet/:id/summary`
+
+See [17_supabase_data_model.md](./17_supabase_data_model.md), [18_supabase_implementation_roadmap.md](./18_supabase_implementation_roadmap.md), [20_ship_and_lifecycle_plan.md](./20_ship_and_lifecycle_plan.md).
 
 ```
-users(id, email?, created_at)
-ledger(trans_id PK, user_id, status, amount_usd, tokens, synced, …)
+users(id, email?, created_at)          — profiles table (auth Phase C)
+ledger → reward_events + user_balances
 ```
-
-Benefits: survives redeploys, supports analytics, fraud queries.
 
 ### Phase C — User accounts on web
 

@@ -23,7 +23,7 @@ import {
 } from '../gamification/cpxSession';
 import { fetchLearnTask } from '../api/learnApi';
 import { fetchCpxWallUrl, fetchSurveyProfile, saveSurveyProfile } from '../api/stayonApi';
-import { isCpxEnabled } from '../api/config';
+import { isCpxEnabled, getApiBaseUrl } from '../api/config';
 import { alertAgentReady } from '../notify/agentReady';
 
 export class StayOnPanelProvider implements vscode.WebviewViewProvider {
@@ -401,6 +401,8 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
       sectionMeta: SECTION_META,
       surveyProfile: this.surveyProfile,
       pausedCpxSession: getPausedCpxSession(this.context) ?? null,
+      extensionUserId: this.getUserId(),
+      apiBaseUrl: getApiBaseUrl(),
     });
   }
 
@@ -458,6 +460,18 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
             void vscode.env.openExternal(vscode.Uri.parse(task.iframeUrl));
           }
         }
+        break;
+      }
+
+      case 'openEarnings': {
+        const base = getApiBaseUrl();
+        const userId = this.getUserId();
+        if (!base) {
+          void vscode.window.showWarningMessage('stayon.apiBaseUrl not set — cannot open earnings page.');
+          break;
+        }
+        const url = `${base.replace(/\/$/, '')}/earnings?userId=${encodeURIComponent(userId)}`;
+        void vscode.env.openExternal(vscode.Uri.parse(url));
         break;
       }
 

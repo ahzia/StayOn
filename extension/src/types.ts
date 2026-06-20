@@ -181,6 +181,8 @@ export type ToWebviewMessage =
       sectionMeta?: SectionMeta[];
       surveyProfile?: SurveyProfileSnapshot;
       pausedCpxSession?: CpxPausedSession | null;
+      extensionUserId?: string;
+      apiBaseUrl?: string;
     }
   | { type: 'state'; status: AgentStatus; contextNote?: string; tool?: string }
   | { type: 'task'; task: TaskPayload }
@@ -222,4 +224,5 @@ export type FromWebviewMessage =
   | { type: 'resumeSurvey' }
   | { type: 'pauseSurvey' }
   | { type: 'openCpxInBrowser' }
-  | { type: 'openCpxInCursor' };
+  | { type: 'openCpxInCursor' }
+  | { type: 'openEarnings' };

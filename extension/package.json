@@ -40,6 +40,10 @@
         "title": "StayOn: Verify Hook Setup"
       },
       {
+        "command": "stayon.installHooks",
+        "title": "StayOn: Install Hooks in Workspace"
+      },
+      {
         "command": "stayon.showOutput",
         "title": "StayOn: Show Debug Output"
       },
