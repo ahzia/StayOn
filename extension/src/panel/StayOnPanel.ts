@@ -4,6 +4,7 @@ import type {
   BusyEndPayload,
   CpxSurveyTask,
   FromWebviewMessage,
+  SurveyProfileSnapshot,
   TaskMode,
   ToWebviewMessage,
   Wallet,
@@ -13,8 +14,15 @@ import { toSnapshot } from '../gamification/wallet';
 import { applyFlowBonus, onWaitEndWithTask, onWaitEndWithoutTask } from '../gamification/streaks';
 import { SECTION_META, normalizeMode } from '../gamification/modes';
 import { pickTask } from '../gamification/taskBank';
+import {
+  clearPausedCpxSession,
+  getPausedCpxSession,
+  pausedSessionFromTask,
+  savePausedCpxSession,
+  taskFromPausedSession,
+} from '../gamification/cpxSession';
 import { fetchLearnTask } from '../api/learnApi';
-import { fetchCpxWallUrl } from '../api/stayonApi';
+import { fetchCpxWallUrl, fetchSurveyProfile, saveSurveyProfile } from '../api/stayonApi';
 import { isCpxEnabled } from '../api/config';
 
 export class StayOnPanelProvider implements vscode.WebviewViewProvider {
@@ -22,8 +30,10 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
 
   private view: vscode.WebviewView | undefined;
   private pendingMessages: ToWebviewMessage[] = [];
+  private surveyProfile: SurveyProfileSnapshot = { completed: false };
 
   constructor(
+    private readonly context: vscode.ExtensionContext,
     private readonly extensionUri: vscode.Uri,
     private readonly getWallet: () => Wallet,
     private readonly saveWallet: () => Promise<void>,
@@ -54,16 +64,16 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
       await this.handleMessage(msg);
     });
 
+    void this.refreshSurveyProfile();
     this.postInit();
     this.flushPendingMessages();
   }
 
   async showPanel(focus = true): Promise<void> {
-    // Open StayOn activity bar container (creates webview if first time)
     try {
       await vscode.commands.executeCommand('workbench.view.extension.stayon');
     } catch {
-      // ignore — container id may differ in some hosts
+      // ignore
     }
 
     if (this.view) {
@@ -81,6 +91,60 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
     void this.startBusySession();
   }
 
+  onCpxRewardSynced(): void {
+    if (!this.taskSession.isCpxSurveyActive() && !this.taskSession.isSurveyPersisted()) {
+      const paused = getPausedCpxSession(this.context);
+      if (!paused) {
+        return;
+      }
+    }
+
+    void this.clearCpxSurvey('Survey complete — points synced');
+    this.post({ type: 'state', status: 'idle' });
+  }
+
+  onStateChange(status: AgentStatus, contextNote?: string, tool?: string): void {
+    if (status === 'idle' && this.shouldAutoPauseCpx()) {
+      void this.pauseCpxSurvey();
+      return;
+    }
+    this.post({ type: 'state', status, contextNote, tool });
+  }
+
+  private shouldAutoPauseCpx(): boolean {
+    if (!this.taskSession.isCpxSurveyActive()) {
+      return false;
+    }
+    return this.taskSession.isSurveyPersisted() || this.taskSession.isCpxEngaged();
+  }
+
+  private async pauseCpxSurvey(): Promise<void> {
+    const task = this.taskSession.getCurrentTask();
+    if (task?.kind !== 'cpx') {
+      const existing = getPausedCpxSession(this.context);
+      this.post({ type: 'cpxPaused', session: existing ?? null });
+      this.post({ type: 'state', status: 'idle' });
+      return;
+    }
+
+    const session = pausedSessionFromTask(task);
+    await savePausedCpxSession(this.context, session);
+    this.taskSession.clearSurveyPersist();
+    this.log('CPX survey paused — resume on next agent wait or Continue survey');
+    this.post({ type: 'cpxPaused', session });
+    this.post({ type: 'state', status: 'idle' });
+  }
+
+  private async clearCpxSurvey(reason?: string): Promise<void> {
+    await clearPausedCpxSession(this.context);
+    this.taskSession.reset();
+    this.post({ type: 'destroyCpxFrame' });
+    this.post({ type: 'cpxPaused', session: null });
+    if (reason) {
+      this.log(reason);
+    }
+  }
+
   private flushPendingMessages(): void {
     if (!this.view || this.pendingMessages.length === 0) {
       return;
@@ -91,8 +155,78 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
     this.pendingMessages = [];
   }
 
+  private async refreshSurveyProfile(): Promise<void> {
+    if (!isCpxEnabled()) {
+      this.surveyProfile = { completed: false };
+      return;
+    }
+
+    const res = await fetchSurveyProfile(this.getUserId());
+    if (res.ok && res.profile) {
+      this.surveyProfile = res.profile;
+      this.post({ type: 'surveyProfile', profile: this.surveyProfile });
+    }
+  }
+
+  private async loadCpxTask(subId1?: string): Promise<CpxSurveyTask | undefined> {
+    const wall = await fetchCpxWallUrl(this.getUserId(), subId1);
+    if (!wall.ok || !wall.iframeUrl) {
+      if (wall.error) {
+        this.log(`CPX wall unavailable: ${wall.error}`);
+      }
+      return undefined;
+    }
+
+    if (wall.profileComplete !== undefined) {
+      this.surveyProfile = { ...this.surveyProfile, completed: wall.profileComplete };
+      this.post({ type: 'surveyProfile', profile: this.surveyProfile });
+    }
+
+    return {
+      kind: 'cpx',
+      id: 'cpx-wall',
+      iframeUrl: wall.iframeUrl,
+      label: 'CPX Research survey',
+      inventoryType: 'cpx-wall',
+    };
+  }
+
+  private async restorePausedCpxSession(agentBusy: boolean): Promise<boolean> {
+    const paused = getPausedCpxSession(this.context);
+    if (!paused || paused.inventoryType !== 'cpx-wall') {
+      return false;
+    }
+
+    const task = taskFromPausedSession(paused);
+    if (agentBusy) {
+      this.taskSession.startWait('surveys', task);
+      this.taskSession.noteCpxEngaged();
+    } else {
+      this.taskSession.reset();
+      this.taskSession.setTask(task);
+      this.taskSession.noteCpxEngaged();
+    }
+
+    await this.showPanel(true);
+    this.post({ type: 'state', status: agentBusy ? 'busy' : 'idle' });
+    this.post({ type: 'task', task });
+    if (agentBusy) {
+      this.postWallet();
+    }
+    this.log(agentBusy ? 'Resumed paused CPX survey (agent wait)' : 'Resumed paused CPX survey');
+    return true;
+  }
+
   private async startBusySession(): Promise<void> {
     const mode = this.getMode();
+
+    if (mode === 'surveys' && isCpxEnabled()) {
+      const resumed = await this.restorePausedCpxSession(true);
+      if (resumed) {
+        return;
+      }
+    }
+
     this.taskSession.startWait(mode, pickTask(mode));
     const task = this.taskSession.getCurrentTask();
     if (!task) {
@@ -123,32 +257,21 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
     }
 
     try {
-      const wall = await fetchCpxWallUrl(this.getUserId(), this.taskSession.getWaitSessionId());
-      if (wall.ok && wall.iframeUrl) {
-        const cpxTask: CpxSurveyTask = {
-          kind: 'cpx',
-          id: 'cpx-wall',
-          iframeUrl: wall.iframeUrl,
-          label: 'CPX Research survey',
-        };
+      const cpxTask = await this.loadCpxTask(this.taskSession.getWaitSessionId());
+      if (cpxTask) {
         this.taskSession.setTask(cpxTask);
         this.post({ type: 'task', task: cpxTask });
         this.log('CPX SurveyWall loaded');
-      } else if (wall.error) {
-        this.log(`CPX wall unavailable: ${wall.error}`);
       }
     } catch (err) {
       this.log(`CPX wall failed: ${String(err)}`);
     }
   }
 
-  onStateChange(status: AgentStatus, contextNote?: string, tool?: string): void {
-    this.post({ type: 'state', status, contextNote, tool });
-  }
-
   async onBusyEnd(payload: BusyEndPayload): Promise<void> {
     const wallet = this.getWallet();
     let flowBonus: number | undefined;
+    const persistCpx = this.taskSession.shouldPersistCpxSurvey();
 
     if (this.taskSession.hasCompletedTask()) {
       flowBonus = applyFlowBonus(wallet);
@@ -159,11 +282,25 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
 
     await this.saveWallet();
 
+    if (persistCpx) {
+      this.taskSession.markSurveyPersist();
+      this.post({
+        type: 'ready',
+        contextNote: payload.contextNote,
+        flowBonus,
+        taskReward: this.taskSession.getTaskRewardEarned(),
+        surveyPersist: true,
+      });
+      this.postWallet();
+      return;
+    }
+
     this.post({
       type: 'ready',
       contextNote: payload.contextNote,
       flowBonus,
       taskReward: this.taskSession.getTaskRewardEarned(),
+      surveyPersist: false,
     });
     this.postWallet();
     this.taskSession.reset();
@@ -185,6 +322,8 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
       mode: this.getMode(),
       cpxEnabled: isCpxEnabled(),
       sectionMeta: SECTION_META,
+      surveyProfile: this.surveyProfile,
+      pausedCpxSession: getPausedCpxSession(this.context) ?? null,
     });
   }
 
@@ -201,6 +340,7 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
 
     switch (msg.type) {
       case 'ready':
+        void this.refreshSurveyProfile();
         this.postInit();
         break;
 
@@ -210,8 +350,52 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
         break;
 
       case 'dismissReady':
+        if (this.taskSession.isSurveyPersisted() || this.taskSession.isCpxEngaged()) {
+          await this.pauseCpxSurvey();
+        } else {
+          this.post({ type: 'state', status: 'idle' });
+        }
+        break;
+
+      case 'pauseSurvey':
+        await this.pauseCpxSurvey();
+        break;
+
+      case 'dismissSurvey':
+        await this.clearCpxSurvey('CPX survey stopped');
         this.post({ type: 'state', status: 'idle' });
         break;
+
+      case 'resumeSurvey': {
+        const restored = await this.restorePausedCpxSession(false);
+        if (!restored) {
+          void vscode.window.showInformationMessage('No paused survey to resume.');
+        }
+        break;
+      }
+
+      case 'openSurveyProfile':
+        await this.showPanel(true);
+        break;
+
+      case 'submitSurveyProfile': {
+        const result = await saveSurveyProfile(this.getUserId(), {
+          email: msg.email,
+          birthdayYear: msg.birthdayYear,
+          birthdayMonth: msg.birthdayMonth,
+          birthdayDay: msg.birthdayDay,
+          gender: msg.gender,
+          countryCode: msg.countryCode,
+        });
+        if (!result.ok) {
+          void vscode.window.showWarningMessage(result.error ?? 'Could not save profile');
+          return;
+        }
+        this.surveyProfile = result.profile ?? { completed: true };
+        this.post({ type: 'surveyProfile', profile: this.surveyProfile });
+        void vscode.window.showInformationMessage('Survey profile saved — CPX will skip the signup form.');
+        break;
+      }
 
       case 'learnComplete': {
         const learnResult = this.taskSession.completeLearn(wallet, msg.taskId);
@@ -294,7 +478,7 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource}; img-src ${webview.cspSource} data:; frame-src https://offers.cpx-research.com https://click.cpx-research.com https://live-api.cpx-research.com;">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src ${webview.cspSource} 'unsafe-inline'; script-src 'nonce-${nonce}'; font-src ${webview.cspSource}; img-src ${webview.cspSource} data:; frame-src https://offers.cpx-research.com https://click.cpx-research.com https://live-api.cpx-research.com https://wall.cpx-research.com;">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <link href="${codiconsUri}" rel="stylesheet">
   <link href="${styleUri}" rel="stylesheet">

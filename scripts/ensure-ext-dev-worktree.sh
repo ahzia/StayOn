@@ -22,4 +22,13 @@ if [[ -f "$HOOK" ]]; then
   chmod +x "$HOOK"
 fi
 
+# EH opens this worktree as workspace — copy dev settings so stayon.apiBaseUrl applies there
+SETTINGS_SRC="$ROOT/.vscode/settings.json"
+SETTINGS_DST="$WT/.vscode/settings.json"
+if [[ -f "$SETTINGS_SRC" ]]; then
+  mkdir -p "$WT/.vscode"
+  cp "$SETTINGS_SRC" "$SETTINGS_DST"
+  echo "Synced $SETTINGS_SRC → worktree .vscode/settings.json"
+fi
+
 echo "Extension dev worktree ready: $WT"

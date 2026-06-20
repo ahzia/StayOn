@@ -6,21 +6,28 @@ import { redeemPerk as applyPerkRedemption } from './perks';
 
 export class TaskSession {
   private currentTask: TaskPayload | undefined;
+  /** Local task finished (learn, etc.) — not CPX iframe open */
   private completedThisWait = false;
   private taskRewardEarned = 0;
   private waitSessionId = '';
+  private cpxEngaged = false;
+  private surveyPersistAfterReady = false;
 
   reset(): void {
     this.currentTask = undefined;
     this.completedThisWait = false;
     this.taskRewardEarned = 0;
     this.waitSessionId = '';
+    this.cpxEngaged = false;
+    this.surveyPersistAfterReady = false;
   }
 
   startWait(mode: TaskMode, task?: TaskPayload): TaskPayload {
     this.completedThisWait = false;
     this.taskRewardEarned = 0;
     this.waitSessionId = `wait-${Date.now()}`;
+    this.cpxEngaged = false;
+    this.surveyPersistAfterReady = false;
     this.currentTask = task ?? pickTask(mode);
     return this.currentTask;
   }
@@ -45,6 +52,31 @@ export class TaskSession {
     return this.taskRewardEarned;
   }
 
+  isCpxSurveyActive(): boolean {
+    return this.currentTask?.kind === 'cpx';
+  }
+
+  isCpxEngaged(): boolean {
+    return this.cpxEngaged;
+  }
+
+  shouldPersistCpxSurvey(): boolean {
+    return this.isCpxSurveyActive() && this.cpxEngaged && !this.completedThisWait;
+  }
+
+  markSurveyPersist(): void {
+    this.surveyPersistAfterReady = true;
+  }
+
+  isSurveyPersisted(): boolean {
+    return this.surveyPersistAfterReady;
+  }
+
+  clearSurveyPersist(): void {
+    this.surveyPersistAfterReady = false;
+    this.reset();
+  }
+
   completeLearn(wallet: Wallet, taskId: string): AwardResult | null {
     const task = this.currentTask;
     if (!task || task.kind !== 'learn' || task.id !== taskId) {
@@ -64,10 +96,14 @@ export class TaskSession {
   }
 
   noteCpxEngaged(): void {
-    const task = this.currentTask;
-    if (task?.kind === 'cpx' && !this.completedThisWait) {
-      this.completedThisWait = true;
+    if (this.currentTask?.kind === 'cpx') {
+      this.cpxEngaged = true;
     }
+  }
+
+  onCpxRewardReceived(): void {
+    this.completedThisWait = true;
+    this.surveyPersistAfterReady = false;
   }
 
   private finishTask(wallet: Wallet, reward: number, label: string): AwardResult {

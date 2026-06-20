@@ -132,6 +132,24 @@ export interface CpxSurveyTask {
   id: string;
   iframeUrl: string;
   label: string;
+  /** CPX SurveyWall — points only after postback completion */
+  inventoryType: 'cpx-wall';
+  /** Restored from a paused session (same iframe URL, do not reload) */
+  resumed?: boolean;
+}
+
+export interface CpxPausedSession {
+  iframeUrl: string;
+  inventoryType: 'cpx-wall';
+  label: string;
+  pausedAt: string;
+}
+
+export interface SurveyProfileSnapshot {
+  completed: boolean;
+  emailMasked?: string;
+  birthdayYear?: number;
+  countryCode?: string;
 }
 
 export type TaskPayload =
@@ -151,13 +169,30 @@ export interface BusyEndPayload {
 }
 
 export type ToWebviewMessage =
-  | { type: 'init'; wallet: WalletSnapshot; mode: TaskMode; cpxEnabled?: boolean; sectionMeta?: SectionMeta[] }
+  | {
+      type: 'init';
+      wallet: WalletSnapshot;
+      mode: TaskMode;
+      cpxEnabled?: boolean;
+      sectionMeta?: SectionMeta[];
+      surveyProfile?: SurveyProfileSnapshot;
+      pausedCpxSession?: CpxPausedSession | null;
+    }
   | { type: 'state'; status: AgentStatus; contextNote?: string; tool?: string }
   | { type: 'task'; task: TaskPayload }
   | { type: 'wallet'; wallet: WalletSnapshot }
   | { type: 'reward'; tokens: number; label: string; bonus?: string }
-  | { type: 'ready'; contextNote: string; flowBonus?: number; taskReward?: number }
-  | { type: 'badge'; id: string; name: string };
+  | {
+      type: 'ready';
+      contextNote: string;
+      flowBonus?: number;
+      taskReward?: number;
+      surveyPersist?: boolean;
+    }
+  | { type: 'badge'; id: string; name: string }
+  | { type: 'surveyProfile'; profile: SurveyProfileSnapshot }
+  | { type: 'cpxPaused'; session: CpxPausedSession | null }
+  | { type: 'destroyCpxFrame' };
 
 export type SectionMeta = {
   id: TaskMode;
@@ -176,4 +211,9 @@ export type FromWebviewMessage =
   | { type: 'openSponsor'; url: string; taskId: string }
   | { type: 'cpxEngaged' }
   | { type: 'redeemPerk'; perkId: string }
-  | { type: 'learnRefresh' };
+  | { type: 'learnRefresh' }
+  | { type: 'submitSurveyProfile'; email: string; birthdayYear: number; birthdayMonth: number; birthdayDay: number; gender?: 'm' | 'f'; countryCode?: string }
+  | { type: 'openSurveyProfile' }
+  | { type: 'dismissSurvey' }
+  | { type: 'resumeSurvey' }
+  | { type: 'pauseSurvey' };

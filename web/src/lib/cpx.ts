@@ -33,12 +33,24 @@ export function validatePostbackHash(transId: string, hash: string, secret: stri
   return timingSafeEqual(expected, hash.toLowerCase());
 }
 
+export type CpxProfileParams = {
+  email?: string;
+  username?: string;
+  birthdayYear?: number;
+  birthdayMonth?: number;
+  birthdayDay?: number;
+  gender?: 'm' | 'f';
+  countryCode?: string;
+  zipCode?: string;
+};
+
 export function buildSurveyWallUrl(params: {
   appId: string;
   extUserId: string;
   secret: string;
   subId1?: string;
   subId2?: string;
+  profile?: CpxProfileParams;
 }): string {
   const secureHash = cpxSecureHash(params.extUserId, params.secret);
   const qs = new URLSearchParams({
@@ -52,6 +64,34 @@ export function buildSurveyWallUrl(params: {
   if (params.subId2) {
     qs.set('subid_2', params.subId2);
   }
+
+  const profile = params.profile;
+  if (profile?.email) {
+    qs.set('email', profile.email);
+  }
+  if (profile?.username) {
+    qs.set('username', profile.username);
+  }
+  if (
+    profile?.birthdayYear &&
+    profile?.birthdayMonth &&
+    profile?.birthdayDay
+  ) {
+    qs.set('main_info', 'true');
+    qs.set('birthday_year', String(profile.birthdayYear));
+    qs.set('birthday_month', String(profile.birthdayMonth));
+    qs.set('birthday_day', String(profile.birthdayDay));
+  }
+  if (profile?.gender) {
+    qs.set('gender', profile.gender);
+  }
+  if (profile?.countryCode) {
+    qs.set('user_country_code', profile.countryCode);
+  }
+  if (profile?.zipCode) {
+    qs.set('zip_code', profile.zipCode);
+  }
+
   return `https://offers.cpx-research.com/index.php?${qs.toString()}`;
 }
 

@@ -47,6 +47,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const userId = getOrCreateUserId(context);
 
   const panelProvider = new StayOnPanelProvider(
+    context,
     context.extensionUri,
     () => wallet,
     saveWallet,
@@ -61,7 +62,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     () => userId,
     () => wallet,
     saveWallet,
-    (tokens, label) => panelProvider.postReward(tokens, label),
+    (tokens, label) => {
+      panelProvider.postReward(tokens, label);
+      panelProvider.onCpxRewardSynced();
+    },
     log
   );
   rewardSync.start();
