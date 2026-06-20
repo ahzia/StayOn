@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "skills": {
+    "vscode-extension-expert": {
+      "source": "s-hiraoku/vscode-sidebar-terminal",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/vscode-extension-expert/SKILL.md",
+      "computedHash": "75c47e6af1766e54520759124efb1a66cfae9f739a2a8039b4c253b1bdfe0391"
+    },
+    "vscode-webview-expert": {
+      "source": "s-hiraoku/vscode-sidebar-terminal",
+      "sourceType": "github",
+      "skillPath": ".claude/skills/vscode-webview-expert/SKILL.md",
+      "computedHash": "48091ac572d4e290cd48c725835a4cbdaee2b4937725a07b43fb53a22a07193c"
+    }
+  }
+}

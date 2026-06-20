@@ -1,0 +1,127 @@
+export type AgentStatus = 'idle' | 'busy' | 'ready';
+
+export type BridgeEvent =
+  | { event: 'busy_start'; context_note?: string; ts: string }
+  | { event: 'busy_heartbeat'; phase?: string; tool?: string; ts: string }
+  | { event: 'busy_ref'; delta: number; ts: string }
+  | { event: 'busy_end'; status: string; ts: string }
+  | { event: 'session_end'; ts: string };
+
+export interface LedgerEntry {
+  id: string;
+  ts: string;
+  type: 'task' | 'bonus' | 'streak' | 'challenge' | 'redeem';
+  tokens: number;
+  label: string;
+}
+
+export interface DailyChallenge {
+  id: string;
+  progress: number;
+  target: number;
+  completed: boolean;
+  label: string;
+  reward: number;
+}
+
+export interface Wallet {
+  tokens: number;
+  totalXp: number;
+  level: number;
+  dailyStreak: number;
+  waitStreak: number;
+  lastActiveDate: string;
+  badges: string[];
+  history: LedgerEntry[];
+  dailyChallenge: DailyChallenge;
+  totalTasks: number;
+  focusSessions: number;
+  subagentTasks: number;
+  waitsCompleted: number;
+  tasksToday: number;
+  tasksTodayDate: string;
+}
+
+export interface WalletSnapshot {
+  tokens: number;
+  cashEstimate: string;
+  level: number;
+  xp: number;
+  xpForNext: number;
+  xpProgress: number;
+  dailyStreak: number;
+  waitStreak: number;
+  badges: string[];
+  history: LedgerEntry[];
+  dailyChallenge: DailyChallenge;
+  stats: {
+    totalTasks: number;
+    waitsCompleted: number;
+    tasksToday: number;
+  };
+}
+
+export type TaskMode = 'earn' | 'learn' | 'focus';
+
+export interface QuizTask {
+  kind: 'quiz';
+  id: string;
+  question: string;
+  options: string[];
+  correctIndex: number;
+  reward: number;
+}
+
+export interface SponsoredTask {
+  kind: 'sponsored';
+  id: string;
+  sponsor: string;
+  tagline: string;
+  url: string;
+  viewReward: number;
+  clickReward: number;
+}
+
+export interface FocusTask {
+  kind: 'focus';
+  id: string;
+  prompt: string;
+  durationSec: number;
+  reward: number;
+}
+
+export interface LearnTask {
+  kind: 'learn';
+  id: string;
+  question: string;
+  answer: string;
+  reward: number;
+}
+
+export type TaskPayload = QuizTask | SponsoredTask | FocusTask | LearnTask;
+
+export interface BusyEndPayload {
+  status: string;
+  contextNote: string;
+  flowBonus?: number;
+  taskReward?: number;
+}
+
+export type ToWebviewMessage =
+  | { type: 'init'; wallet: WalletSnapshot; mode: TaskMode }
+  | { type: 'state'; status: AgentStatus; contextNote?: string; tool?: string }
+  | { type: 'task'; task: TaskPayload }
+  | { type: 'wallet'; wallet: WalletSnapshot }
+  | { type: 'reward'; tokens: number; label: string; bonus?: string }
+  | { type: 'ready'; contextNote: string; flowBonus?: number; taskReward?: number }
+  | { type: 'badge'; id: string; name: string };
+
+export type FromWebviewMessage =
+  | { type: 'ready' }
+  | { type: 'taskComplete'; taskId: string; answerIndex?: number }
+  | { type: 'sponsoredView'; taskId: string }
+  | { type: 'learnComplete'; taskId: string }
+  | { type: 'focusComplete'; taskId: string }
+  | { type: 'setMode'; mode: TaskMode }
+  | { type: 'dismissReady' }
+  | { type: 'openSponsor'; url: string; taskId: string };
