@@ -1,7 +1,8 @@
-import type { TaskMode, TaskPayload, Wallet } from '../types';
-import { pickTask, validateQuizAnswer } from './taskBank';
+import type { LearnTask, TaskMode, TaskPayload, Wallet } from '../types';
+import { pickRandomLearn, pickTask } from './taskBank';
 import { awardTokens } from './streaks';
 import type { AwardResult } from './streaks';
+import { redeemPerk as applyPerkRedemption } from './perks';
 
 export class TaskSession {
   private currentTask: TaskPayload | undefined;
@@ -44,37 +45,6 @@ export class TaskSession {
     return this.taskRewardEarned;
   }
 
-  completeQuiz(wallet: Wallet, taskId: string, answerIndex: number): AwardResult | null {
-    const task = this.currentTask;
-    if (!task || task.kind !== 'quiz' || task.id !== taskId) {
-      return null;
-    }
-    if (!validateQuizAnswer(task, answerIndex)) {
-      return null;
-    }
-    return this.finishTask(wallet, task.reward, `Quiz: ${task.question.slice(0, 40)}…`);
-  }
-
-  completeSponsoredView(wallet: Wallet, taskId: string): AwardResult | null {
-    const task = this.currentTask;
-    if (!task || task.kind !== 'sponsored' || task.id !== taskId || this.completedThisWait) {
-      return null;
-    }
-    return this.finishTask(wallet, task.viewReward, `Sponsored: ${task.sponsor}`);
-  }
-
-  completeSponsoredClick(wallet: Wallet, taskId: string): AwardResult | null {
-    const task = this.currentTask;
-    if (!task || task.kind !== 'sponsored' || task.id !== taskId) {
-      return null;
-    }
-    if (this.completedThisWait) {
-      const extra = awardTokens(wallet, task.clickReward - task.viewReward, 15, `Click: ${task.sponsor}`, 'bonus');
-      return extra;
-    }
-    return this.finishTask(wallet, task.clickReward, `Sponsored click: ${task.sponsor}`);
-  }
-
   completeLearn(wallet: Wallet, taskId: string): AwardResult | null {
     const task = this.currentTask;
     if (!task || task.kind !== 'learn' || task.id !== taskId) {
@@ -83,13 +53,14 @@ export class TaskSession {
     return this.finishTask(wallet, task.reward, `Learn: ${task.question.slice(0, 40)}…`);
   }
 
-  completeFocus(wallet: Wallet, taskId: string): AwardResult | null {
-    const task = this.currentTask;
-    if (!task || task.kind !== 'focus' || task.id !== taskId) {
-      return null;
-    }
-    wallet.focusSessions += 1;
-    return this.finishTask(wallet, task.reward, 'Focus session');
+  redeemPerk(wallet: Wallet, perkId: string): { ok: boolean; error?: string } {
+    return applyPerkRedemption(wallet, perkId);
+  }
+
+  refreshLearnTask(): LearnTask {
+    const task = pickRandomLearn();
+    this.currentTask = task;
+    return task;
   }
 
   noteCpxEngaged(): void {

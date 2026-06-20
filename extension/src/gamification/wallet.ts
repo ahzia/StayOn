@@ -29,6 +29,9 @@ export function defaultWallet(): Wallet {
     waitsCompleted: 0,
     tasksToday: 0,
     tasksTodayDate: today,
+    flowBoostPending: false,
+    streakShieldPending: false,
+    contextPinned: false,
   };
 }
 
@@ -55,6 +58,7 @@ export function toSnapshot(wallet: Wallet): WalletSnapshot {
     badges: wallet.badges,
     history: wallet.history.slice(0, 20),
     dailyChallenge: wallet.dailyChallenge,
+    activePerks: activePerkLabels(wallet),
     stats: {
       totalTasks: wallet.totalTasks,
       waitsCompleted: wallet.waitsCompleted,
@@ -92,4 +96,18 @@ export function resetDailyCountersIfNeeded(wallet: Wallet): void {
       completed: false,
     };
   }
+}
+
+function activePerkLabels(wallet: Wallet): string[] {
+  const labels: string[] = [];
+  if (wallet.contextPinned) {
+    labels.push('Context pinned');
+  }
+  if (wallet.flowBoostPending) {
+    labels.push('Flow boost');
+  }
+  if (wallet.streakShieldPending) {
+    labels.push('Streak shield');
+  }
+  return labels;
 }

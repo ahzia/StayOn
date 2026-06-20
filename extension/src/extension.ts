@@ -8,6 +8,7 @@ import { StayOnPanelProvider } from './panel/StayOnPanel';
 import { TaskSession } from './gamification/tasks';
 import { defaultWallet, WALLET_KEY } from './gamification/wallet';
 import type { TaskMode, Wallet } from './types';
+import { normalizeMode } from './gamification/modes';
 import { formatPoints } from './brand/formatPoints';
 import { getOrCreateUserId } from './api/config';
 import { RewardSync } from './api/rewardSync';
@@ -28,13 +29,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     outputChannel.appendLine(line);
   };
 
-  let wallet = context.globalState.get<Wallet>(WALLET_KEY) ?? defaultWallet();
+  const saved = context.globalState.get<Wallet>(WALLET_KEY);
+  let wallet: Wallet = saved ? { ...defaultWallet(), ...saved } : defaultWallet();
   const saveWallet = async () => {
     await context.globalState.update(WALLET_KEY, wallet);
   };
 
   const getMode = (): TaskMode =>
-    vscode.workspace.getConfiguration('stayon').get<TaskMode>('mode') ?? 'earn';
+    normalizeMode(vscode.workspace.getConfiguration('stayon').get<string>('mode'));
 
   const setMode = (mode: TaskMode) => {
     void vscode.workspace.getConfiguration('stayon').update('mode', mode, vscode.ConfigurationTarget.Global);

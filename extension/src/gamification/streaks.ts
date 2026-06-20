@@ -98,7 +98,12 @@ function unlockBadges(wallet: Wallet): { id: string; name: string }[] {
 }
 
 export function applyFlowBonus(wallet: Wallet): number {
-  const bonus = ECONOMY.FLOW_BONUS;
+  const bonus = wallet.flowBoostPending
+    ? ECONOMY.FLOW_BONUS + ECONOMY.FLOW_BOOST_BONUS
+    : ECONOMY.FLOW_BONUS;
+  if (wallet.flowBoostPending) {
+    wallet.flowBoostPending = false;
+  }
   wallet.tokens += bonus;
   wallet.waitStreak += 1;
   addLedgerEntry(wallet, 'bonus', bonus, 'Flow bonus');
@@ -106,10 +111,16 @@ export function applyFlowBonus(wallet: Wallet): number {
 }
 
 export function onWaitEndWithoutTask(wallet: Wallet): void {
-  wallet.waitStreak = 0;
+  if (wallet.streakShieldPending) {
+    wallet.streakShieldPending = false;
+  } else {
+    wallet.waitStreak = 0;
+  }
   wallet.waitsCompleted += 1;
+  wallet.contextPinned = false;
 }
 
 export function onWaitEndWithTask(wallet: Wallet): void {
   wallet.waitsCompleted += 1;
+  wallet.contextPinned = false;
 }

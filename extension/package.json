@@ -59,9 +59,9 @@
         },
         "stayon.mode": {
           "type": "string",
-          "enum": ["earn", "learn", "focus"],
-          "default": "earn",
-          "description": "Default task mode"
+          "enum": ["surveys", "learn", "perks"],
+          "default": "surveys",
+          "description": "Default activity while the agent is busy: Surveys (paid CPX), Learn (1 point tips), or Perks (spend points)"
         },
         "stayon.apiBaseUrl": {
           "type": "string",
@@ -71,7 +71,7 @@
         "stayon.cpxSurveys": {
           "type": "boolean",
           "default": true,
-          "description": "Load CPX SurveyWall in earn mode when apiBaseUrl is set"
+          "description": "Load CPX SurveyWall in surveys mode when apiBaseUrl is set"
         }
       }
     }

@@ -1,5 +1,6 @@
 import * as crypto from 'crypto';
 import * as vscode from 'vscode';
+import { BUNDLED_API_BASE_URL } from './defaults';
 
 const USER_ID_KEY = 'stayon.userId';
 
@@ -12,9 +13,19 @@ export function getOrCreateUserId(context: vscode.ExtensionContext): string {
   return userId;
 }
 
+/** User setting → package.json default → bundled release URL */
 export function getApiBaseUrl(): string | undefined {
-  const url = vscode.workspace.getConfiguration('stayon').get<string>('apiBaseUrl')?.trim();
-  return url || undefined;
+  const cfg = vscode.workspace.getConfiguration('stayon');
+  const fromSetting = cfg.get<string>('apiBaseUrl')?.trim();
+  if (fromSetting) {
+    return fromSetting.replace(/\/$/, '');
+  }
+  const fromPackageDefault = cfg.inspect<string>('apiBaseUrl')?.defaultValue?.trim();
+  if (fromPackageDefault) {
+    return fromPackageDefault.replace(/\/$/, '');
+  }
+  const bundled = BUNDLED_API_BASE_URL.trim();
+  return bundled ? bundled.replace(/\/$/, '') : undefined;
 }
 
 export function isCpxEnabled(): boolean {

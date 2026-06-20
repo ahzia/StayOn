@@ -11,6 +11,9 @@ import type {
 import { TaskSession } from '../gamification/tasks';
 import { toSnapshot } from '../gamification/wallet';
 import { applyFlowBonus, onWaitEndWithTask, onWaitEndWithoutTask } from '../gamification/streaks';
+import { SECTION_META, normalizeMode } from '../gamification/modes';
+import { pickTask } from '../gamification/taskBank';
+import { fetchLearnTask } from '../api/learnApi';
 import { fetchCpxWallUrl } from '../api/stayonApi';
 import { isCpxEnabled } from '../api/config';
 
@@ -90,20 +93,32 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
 
   private async startBusySession(): Promise<void> {
     const mode = this.getMode();
-    this.taskSession.startWait(mode);
+    this.taskSession.startWait(mode, pickTask(mode));
     const task = this.taskSession.getCurrentTask();
     if (!task) {
       this.log('No task available for busy session');
       return;
     }
 
-    // Show panel immediately — never block on CPX network
     await this.showPanel(true);
     this.post({ type: 'state', status: 'busy' });
     this.post({ type: 'task', task });
     this.postWallet();
 
-    if (mode !== 'earn' || !isCpxEnabled()) {
+    if (mode === 'learn') {
+      try {
+        const remote = await fetchLearnTask(this.getUserId(), this.taskSession.getWaitSessionId());
+        if (remote) {
+          this.taskSession.setTask(remote);
+          this.post({ type: 'task', task: remote });
+        }
+      } catch (err) {
+        this.log(`Learn task fetch failed: ${String(err)}`);
+      }
+      return;
+    }
+
+    if (mode !== 'surveys' || !isCpxEnabled()) {
       return;
     }
 
@@ -169,6 +184,7 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
       wallet: toSnapshot(this.getWallet()),
       mode: this.getMode(),
       cpxEnabled: isCpxEnabled(),
+      sectionMeta: SECTION_META,
     });
   }
 
@@ -197,27 +213,6 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
         this.post({ type: 'state', status: 'idle' });
         break;
 
-      case 'taskComplete': {
-        if (msg.answerIndex === undefined) {
-          return;
-        }
-        const result = this.taskSession.completeQuiz(wallet, msg.taskId, msg.answerIndex);
-        if (!result) {
-          void vscode.window.showWarningMessage('Wrong answer — try again!');
-          return;
-        }
-        await this.afterAward(result);
-        break;
-      }
-
-      case 'sponsoredView': {
-        const viewResult = this.taskSession.completeSponsoredView(wallet, msg.taskId);
-        if (viewResult) {
-          await this.afterAward(viewResult);
-        }
-        break;
-      }
-
       case 'learnComplete': {
         const learnResult = this.taskSession.completeLearn(wallet, msg.taskId);
         if (learnResult) {
@@ -226,25 +221,40 @@ export class StayOnPanelProvider implements vscode.WebviewViewProvider {
         break;
       }
 
-      case 'openSponsor': {
-        const uri = vscode.Uri.parse(msg.url);
-        void vscode.env.openExternal(uri);
-        const result = this.taskSession.completeSponsoredClick(wallet, msg.taskId);
-        if (result) {
-          await this.afterAward(result);
-        }
-        break;
-      }
-
       case 'cpxEngaged':
         this.taskSession.noteCpxEngaged();
         break;
 
-      case 'focusComplete': {
-        const result = this.taskSession.completeFocus(wallet, msg.taskId);
-        if (result) {
-          await this.afterAward(result);
+      case 'redeemPerk': {
+        const result = this.taskSession.redeemPerk(wallet, msg.perkId);
+        if (!result.ok) {
+          void vscode.window.showWarningMessage(result.error ?? 'Could not redeem perk');
+          return;
         }
+        if (msg.perkId === 'learn-refresh' && this.getMode() === 'learn') {
+          const refreshed = this.taskSession.refreshLearnTask();
+          this.post({ type: 'task', task: refreshed });
+        } else {
+          const current = this.taskSession.getCurrentTask();
+          if (current) {
+            this.post({ type: 'task', task: current });
+          }
+        }
+        await this.saveWallet();
+        this.postWallet();
+        break;
+      }
+
+      case 'learnRefresh': {
+        const refreshResult = this.taskSession.redeemPerk(wallet, 'learn-refresh');
+        if (!refreshResult.ok) {
+          void vscode.window.showWarningMessage(refreshResult.error ?? 'Could not refresh learn card');
+          return;
+        }
+        const refreshed = this.taskSession.refreshLearnTask();
+        this.post({ type: 'task', task: refreshed });
+        await this.saveWallet();
+        this.postWallet();
         break;
       }
     }

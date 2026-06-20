@@ -1,0 +1,4 @@
+{
+  "stayon.apiBaseUrl": "http://localhost:3000",
+  "stayon.cpxSurveys": true
+}

@@ -11,6 +11,13 @@ export const ECONOMY = {
   FOCUS_REWARD: 12,
   /** Learn mode — engagement only; paid CPX tasks are 50–500+ ⭐ */
   LEARN_REWARD: 1,
+  PERKS: {
+    CONTEXT_PIN: 10,
+    FLOW_BOOST: 25,
+    LEARN_REFRESH: 5,
+    STREAK_SHIELD: 40,
+  },
+  FLOW_BOOST_BONUS: 15,
 } as const;
 
 export function cashEstimate(tokens: number): string {

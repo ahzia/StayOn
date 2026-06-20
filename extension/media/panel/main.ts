@@ -9,6 +9,21 @@ declare function acquireVsCodeApi(): {
 
 const vscode = acquireVsCodeApi();
 
+interface SectionMeta {
+  id: 'surveys' | 'learn' | 'perks';
+  title: string;
+  subtitle: string;
+  earnLabel: string;
+}
+
+interface PerkDefinition {
+  id: string;
+  title: string;
+  description: string;
+  cost: number;
+  benefit: string;
+}
+
 interface WalletSnapshot {
   tokens: number;
   cashEstimate: string;
@@ -21,20 +36,43 @@ interface WalletSnapshot {
   badges: string[];
   history: { label: string; tokens: number; ts: string }[];
   dailyChallenge: { label: string; progress: number; target: number; completed: boolean; reward: number };
+  activePerks: string[];
   stats: { totalTasks: number; waitsCompleted: number; tasksToday: number };
 }
 
+type TaskMode = 'surveys' | 'learn' | 'perks';
 type TaskPayload = Record<string, unknown>;
 type AgentStatus = 'idle' | 'busy' | 'ready';
 
+const DEFAULT_SECTIONS: SectionMeta[] = [
+  {
+    id: 'surveys',
+    title: 'Surveys',
+    subtitle: 'Real paid surveys via CPX Research',
+    earnLabel: '50–500+ ⭐ per complete',
+  },
+  {
+    id: 'learn',
+    title: 'Learn',
+    subtitle: 'Short dev tips matched to your stack',
+    earnLabel: '1 ⭐ per card',
+  },
+  {
+    id: 'perks',
+    title: 'Perks',
+    subtitle: 'Spend points on workflow boosts',
+    earnLabel: '5–40 ⭐ each',
+  },
+];
+
 let wallet: WalletSnapshot | undefined;
-let mode: 'earn' | 'learn' | 'focus' = 'earn';
+let mode: TaskMode = 'surveys';
+let sections: SectionMeta[] = DEFAULT_SECTIONS;
 let cpxEnabled = false;
 let status: AgentStatus = 'idle';
 let contextNote = '';
 let activeTab: 'play' | 'wallet' | 'stats' = 'play';
 let currentTask: TaskPayload | undefined;
-let sponsoredViewSent = new Set<string>();
 let lastBalance = -1;
 
 const app = document.getElementById('app')!;
@@ -46,7 +84,8 @@ window.addEventListener('message', (event) => {
   switch (msg.type) {
     case 'init':
       wallet = msg.wallet;
-      mode = msg.mode;
+      mode = normalizeMode(msg.mode);
+      sections = msg.sectionMeta ?? DEFAULT_SECTIONS;
       cpxEnabled = Boolean(msg.cpxEnabled);
       render();
       break;
@@ -57,16 +96,8 @@ window.addEventListener('message', (event) => {
       break;
     case 'task':
       currentTask = msg.task;
-      sponsoredViewSent = new Set();
       activeTab = 'play';
       render();
-      if (currentTask?.kind === 'sponsored' && currentTask.id) {
-        const id = String(currentTask.id);
-        if (!sponsoredViewSent.has(id)) {
-          sponsoredViewSent.add(id);
-          vscode.postMessage({ type: 'sponsoredView', taskId: id });
-        }
-      }
       if (currentTask?.kind === 'cpx') {
         vscode.postMessage({ type: 'cpxEngaged' });
       }
@@ -93,6 +124,13 @@ window.addEventListener('message', (event) => {
       break;
   }
 });
+
+function normalizeMode(raw: string | undefined): TaskMode {
+  if (raw === 'earn' || raw === 'surveys') return 'surveys';
+  if (raw === 'focus' || raw === 'perks') return 'perks';
+  if (raw === 'learn') return 'learn';
+  return 'surveys';
+}
 
 function showRewardFloat(text: string): void {
   const el = document.createElement('div');
@@ -123,6 +161,11 @@ function render(): void {
   const balancePop = lastBalance >= 0 && wallet.tokens > lastBalance ? ' balance-pop' : '';
   lastBalance = wallet.tokens;
 
+  const activePerksHtml =
+    wallet.activePerks?.length > 0
+      ? `<div class="active-perks">${wallet.activePerks.map((p) => `<span class="perk-pill">${escapeHtml(p)}</span>`).join('')}</div>`
+      : '';
+
   app.innerHTML = `
     <div class="header">
       <div class="header-row">
@@ -131,6 +174,7 @@ function render(): void {
       </div>
       <div class="balance${balancePop}">${formatPoints(wallet.tokens)}</div>
       <div class="cash">${wallet.cashEstimate}</div>
+      ${activePerksHtml}
     </div>
 
     <div class="tabs">
@@ -141,11 +185,14 @@ function render(): void {
 
     ${renderTabContent()}
 
-    <div class="mode-footer">
-      ${(['earn', 'learn', 'focus'] as const)
+    <div class="activity-footer">
+      ${sections
         .map(
-          (m) =>
-            `<button class="mode-btn ${mode === m ? 'active' : ''}" data-mode="${m}">${capitalize(m)}</button>`
+          (section) =>
+            `<button class="activity-btn ${mode === section.id ? 'active' : ''}" data-mode="${section.id}" title="${escapeHtml(section.subtitle)}">
+              <span class="activity-btn-title">${escapeHtml(section.title)}</span>
+              <span class="activity-btn-earn">${escapeHtml(section.earnLabel)}</span>
+            </button>`
         )
         .join('')}
     </div>
@@ -161,10 +208,12 @@ function renderTabContent(): string {
 }
 
 function renderPlay(): string {
+  const pinned = wallet!.activePerks?.includes('Context pinned');
   const agentHtml =
     status === 'ready'
-      ? `<div class="card ready-overlay card-enter">
+      ? `<div class="card ready-overlay card-enter ${pinned ? 'context-pinned' : ''}">
           <div class="ready-title"><i class="codicon codicon-check"></i> Agent ready</div>
+          ${pinned ? '<div class="pinned-badge">📌 Context pinned</div>' : ''}
           <p>Return to:</p>
           <p class="context">"${escapeHtml(contextNote || 'your coding task')}"</p>
           <button class="btn" id="dismiss-ready">Back to code</button>
@@ -178,7 +227,11 @@ function renderPlay(): string {
         </div>`;
 
   const taskHtml =
-    status === 'busy' && currentTask ? renderTask(currentTask) : status === 'idle' ? renderIdleHint() : '';
+    status === 'busy' && currentTask
+      ? renderTask(currentTask)
+      : status === 'idle'
+        ? renderIdleOverview()
+        : '';
 
   const challenge = wallet!.dailyChallenge;
   const challengeHtml =
@@ -189,61 +242,78 @@ function renderPlay(): string {
   return agentHtml + taskHtml + challengeHtml;
 }
 
-function renderIdleHint(): string {
-  return `<div class="card"><p class="question">Submit a Cursor Agent prompt to start earning points while you wait.</p></div>`;
+function renderIdleOverview(): string {
+  return `<div class="activity-sections">
+    ${sections
+      .map(
+        (section) => `
+      <section class="activity-section ${mode === section.id ? 'selected' : ''}">
+        <div class="activity-section-head">
+          <h3 class="activity-section-title">${escapeHtml(section.title)}</h3>
+          <span class="activity-section-earn">${escapeHtml(section.earnLabel)}</span>
+        </div>
+        <p class="activity-section-sub">${escapeHtml(section.subtitle)}</p>
+      </section>`
+      )
+      .join('')}
+    <p class="idle-hint">Pick an activity below, then submit a Cursor Agent prompt to start.</p>
+  </div>`;
 }
 
 function renderTask(task: TaskPayload): string {
-  if (task.kind === 'quiz') {
-    const options = (task.options as string[]) || [];
-    return `<div class="card card-enter">
-      <div class="card-label"><span>Quick task</span><span class="reward-tag">${formatRewardTag(Number(task.reward))}</span></div>
+  if (task.kind === 'learn') {
+    const tags = (task.tags as string[] | undefined)?.map((t) => `<span class="tag">${escapeHtml(t)}</span>`).join('') ?? '';
+    return `<div class="card card-enter section-learn">
+      <div class="card-label"><span>Learn</span><span class="reward-tag">${formatRewardTag(Number(task.reward))}</span></div>
+      ${tags ? `<div class="tags">${tags}</div>` : ''}
       <div class="question">${escapeHtml(String(task.question))}</div>
-      <div class="options">
-        ${options
-          .map(
-            (opt, i) =>
-              `<button class="option" data-quiz="${task.id}" data-index="${i}">${escapeHtml(opt)}</button>`
-          )
-          .join('')}
+      <p class="context">Answer: ${escapeHtml(String(task.answer))}</p>
+      <div class="btn-row">
+        <button class="btn" data-learn-id="${task.id}">Got it — earn point</button>
+        <button class="btn secondary" data-learn-refresh>New card (5 ⭐)</button>
       </div>
     </div>`;
   }
 
-  if (task.kind === 'sponsored') {
-    return `<div class="card card-enter">
-      <div class="sponsored-badge">Sponsored</div>
-      <div class="card-label"><span>Developer card</span><span class="reward-tag">${formatRewardTag(Number(task.viewReward))}</span></div>
-      <div class="sponsor-name">${escapeHtml(String(task.sponsor))}</div>
-      <p class="question">${escapeHtml(String(task.tagline))}</p>
-      <button class="btn" data-sponsor-url="${escapeHtml(String(task.url))}" data-sponsor-id="${task.id}">
-        Visit (${formatRewardTag(Number(task.clickReward))} click)
-      </button>
-    </div>`;
-  }
-
-  if (task.kind === 'learn') {
-    return `<div class="card card-enter">
-      <div class="card-label"><span>Learn</span><span class="reward-tag">${formatRewardTag(Number(task.reward))}</span></div>
-      <div class="question">${escapeHtml(String(task.question))}</div>
-      <p class="context">Answer: ${escapeHtml(String(task.answer))}</p>
-      <button class="btn" data-learn-id="${task.id}">Got it — earn points</button>
-    </div>`;
-  }
-
-  if (task.kind === 'focus') {
-    return `<div class="card card-enter">
-      <div class="card-label"><span>Focus</span><span class="reward-tag">${formatRewardTag(Number(task.reward))}</span></div>
-      <div class="question">${escapeHtml(String(task.prompt))}</div>
-      <button class="btn" data-focus-id="${task.id}">Done (${task.durationSec}s pause)</button>
+  if (task.kind === 'perk-catalog') {
+    const perks = (task.perks as PerkDefinition[]) ?? [];
+    return `<div class="section-perks">
+      <div class="section-intro">Spend points on small workflow boosts. Effects apply on your next wait or when the agent finishes.</div>
+      ${perks
+        .map((perk) => {
+          const afford = wallet!.tokens >= perk.cost;
+          return `<div class="card perk-card card-enter">
+            <div class="card-label"><span>${escapeHtml(perk.title)}</span><span class="reward-tag">${formatRewardTag(perk.cost)}</span></div>
+            <p class="question">${escapeHtml(perk.description)}</p>
+            <div class="perk-benefit">${escapeHtml(perk.benefit)}</div>
+            <button class="btn ${afford ? '' : 'disabled'}" data-perk-id="${perk.id}" ${afford ? '' : 'disabled'}>
+              Redeem ${formatPoints(perk.cost, true)}
+            </button>
+          </div>`;
+        })
+        .join('')}
     </div>`;
   }
 
   if (task.kind === 'cpx') {
-    return `<div class="card cpx-card card-enter">
-      <div class="card-label"><span>CPX Research</span><span class="reward-tag">Real surveys</span></div>
-      <p class="context">Complete a survey while the agent works. Points sync when CPX confirms.</p>
+    return `<div class="card cpx-card card-enter section-surveys">
+      <div class="card-label"><span>Surveys · CPX Research</span><span class="reward-tag">Paid</span></div>
+      <p class="context">Complete a real survey while the agent works. Points sync when CPX confirms completion.</p>
       <iframe class="cpx-frame" src="${escapeHtml(String(task.iframeUrl))}" title="CPX SurveyWall"></iframe>
+    </div>`;
+  }
+
+  if (task.kind === 'surveys') {
+    const needsBackend = !cpxEnabled;
+    return `<div class="card card-enter section-surveys">
+      <div class="card-label"><span>Surveys</span><span class="reward-tag">50–500+ ⭐</span></div>
+      ${
+        needsBackend
+          ? `<p class="question">Connect StayOn backend to load paid surveys.</p>
+             <p class="context">Set <code>stayon.apiBaseUrl</code> to your StayOn web app (e.g. http://localhost:3000), then reload.</p>`
+          : `<p class="question">${escapeHtml(String(task.label))}</p>
+             <p class="context">Loading CPX SurveyWall…</p>`
+      }
     </div>`;
   }
 
@@ -259,6 +329,12 @@ function renderWallet(): string {
       <div class="meta">Level ${wallet!.level} · ${wallet!.xpProgress}% to next</div>
       <div class="progress-bar"><div class="progress-fill" style="width:${wallet!.xpProgress}%"></div></div>
     </div>
+    ${
+      wallet!.activePerks?.length
+        ? `<div class="card"><div class="card-label"><span>Active perks</span></div>
+           ${wallet!.activePerks.map((p) => `<div class="history-item">${escapeHtml(p)}</div>`).join('')}</div>`
+        : ''
+    }
     <div class="card">
       <div class="card-label"><span>Recent</span></div>
       ${
@@ -270,7 +346,7 @@ function renderWallet(): string {
           : '<p class="context">Complete a wait-task to earn points.</p>'
       }
     </div>
-    <button class="btn secondary" disabled>Redeem (min 5,000 ${formatPoints(5000, true)} — coming soon)</button>`;
+    <button class="btn secondary" disabled>Redeem cash (min 5,000 ${formatPoints(5000, true)} — coming soon)</button>`;
 }
 
 function renderStats(): string {
@@ -302,27 +378,10 @@ function bindEvents(): void {
     });
   });
 
-  app.querySelectorAll('.mode-btn').forEach((el) => {
+  app.querySelectorAll('.activity-btn').forEach((el) => {
     el.addEventListener('click', () => {
-      const m = (el as HTMLElement).dataset.mode as typeof mode;
+      const m = (el as HTMLElement).dataset.mode as TaskMode;
       vscode.postMessage({ type: 'setMode', mode: m });
-    });
-  });
-
-  app.querySelectorAll('.option').forEach((el) => {
-    el.addEventListener('click', () => {
-      const id = (el as HTMLElement).dataset.quiz!;
-      const index = Number((el as HTMLElement).dataset.index);
-      vscode.postMessage({ type: 'taskComplete', taskId: id, answerIndex: index });
-    });
-  });
-
-  app.querySelector('[data-sponsor-url]')?.addEventListener('click', (e) => {
-    const btn = e.currentTarget as HTMLElement;
-    vscode.postMessage({
-      type: 'openSponsor',
-      url: btn.dataset.sponsorUrl!,
-      taskId: btn.dataset.sponsorId!,
     });
   });
 
@@ -331,9 +390,15 @@ function bindEvents(): void {
     vscode.postMessage({ type: 'learnComplete', taskId: id });
   });
 
-  app.querySelector('[data-focus-id]')?.addEventListener('click', (e) => {
-    const id = (e.currentTarget as HTMLElement).dataset.focusId!;
-    vscode.postMessage({ type: 'focusComplete', taskId: id });
+  app.querySelector('[data-learn-refresh]')?.addEventListener('click', () => {
+    vscode.postMessage({ type: 'learnRefresh' });
+  });
+
+  app.querySelectorAll('[data-perk-id]').forEach((el) => {
+    el.addEventListener('click', () => {
+      const perkId = (el as HTMLElement).dataset.perkId!;
+      vscode.postMessage({ type: 'redeemPerk', perkId });
+    });
   });
 
   document.getElementById('dismiss-ready')?.addEventListener('click', () => {
@@ -347,8 +412,4 @@ function escapeHtml(s: string): string {
     .replace(/</g, '&lt;')
     .replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;');
-}
-
-function capitalize(s: string): string {
-  return s.charAt(0).toUpperCase() + s.slice(1);
 }

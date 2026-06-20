@@ -40,6 +40,10 @@ export interface Wallet {
   waitsCompleted: number;
   tasksToday: number;
   tasksTodayDate: string;
+  /** Active perks / boosts */
+  flowBoostPending: boolean;
+  streakShieldPending: boolean;
+  contextPinned: boolean;
 }
 
 export interface WalletSnapshot {
@@ -54,6 +58,7 @@ export interface WalletSnapshot {
   badges: string[];
   history: LedgerEntry[];
   dailyChallenge: DailyChallenge;
+  activePerks: string[];
   stats: {
     totalTasks: number;
     waitsCompleted: number;
@@ -61,7 +66,10 @@ export interface WalletSnapshot {
   };
 }
 
-export type TaskMode = 'earn' | 'learn' | 'focus';
+export type TaskMode = 'surveys' | 'learn' | 'perks';
+
+/** @deprecated aliases — migrated on read */
+export type LegacyTaskMode = 'earn' | 'learn' | 'focus';
 
 export interface QuizTask {
   kind: 'quiz';
@@ -96,6 +104,27 @@ export interface LearnTask {
   question: string;
   answer: string;
   reward: number;
+  tags?: string[];
+}
+
+export interface SurveysTask {
+  kind: 'surveys';
+  id: string;
+  label: string;
+}
+
+export interface PerkDefinition {
+  id: string;
+  title: string;
+  description: string;
+  cost: number;
+  benefit: string;
+}
+
+export interface PerkCatalogTask {
+  kind: 'perk-catalog';
+  id: string;
+  perks: PerkDefinition[];
 }
 
 export interface CpxSurveyTask {
@@ -105,7 +134,14 @@ export interface CpxSurveyTask {
   label: string;
 }
 
-export type TaskPayload = QuizTask | SponsoredTask | FocusTask | LearnTask | CpxSurveyTask;
+export type TaskPayload =
+  | QuizTask
+  | SponsoredTask
+  | FocusTask
+  | LearnTask
+  | SurveysTask
+  | PerkCatalogTask
+  | CpxSurveyTask;
 
 export interface BusyEndPayload {
   status: string;
@@ -115,7 +151,7 @@ export interface BusyEndPayload {
 }
 
 export type ToWebviewMessage =
-  | { type: 'init'; wallet: WalletSnapshot; mode: TaskMode; cpxEnabled?: boolean }
+  | { type: 'init'; wallet: WalletSnapshot; mode: TaskMode; cpxEnabled?: boolean; sectionMeta?: SectionMeta[] }
   | { type: 'state'; status: AgentStatus; contextNote?: string; tool?: string }
   | { type: 'task'; task: TaskPayload }
   | { type: 'wallet'; wallet: WalletSnapshot }
@@ -123,13 +159,21 @@ export type ToWebviewMessage =
   | { type: 'ready'; contextNote: string; flowBonus?: number; taskReward?: number }
   | { type: 'badge'; id: string; name: string };
 
+export type SectionMeta = {
+  id: TaskMode;
+  title: string;
+  subtitle: string;
+  earnLabel: string;
+};
+
 export type FromWebviewMessage =
   | { type: 'ready' }
   | { type: 'taskComplete'; taskId: string; answerIndex?: number }
   | { type: 'sponsoredView'; taskId: string }
   | { type: 'learnComplete'; taskId: string }
-  | { type: 'focusComplete'; taskId: string }
   | { type: 'setMode'; mode: TaskMode }
   | { type: 'dismissReady' }
   | { type: 'openSponsor'; url: string; taskId: string }
-  | { type: 'cpxEngaged' };
+  | { type: 'cpxEngaged' }
+  | { type: 'redeemPerk'; perkId: string }
+  | { type: 'learnRefresh' };
