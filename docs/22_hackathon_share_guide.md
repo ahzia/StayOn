@@ -29,7 +29,7 @@ https://stay-on-nu.vercel.app/try
 
 They need:
 
-1. **VSIX file** (GitHub Release or AirDrop) — build: `cd extension && npm run compile && npx vsce package --no-dependencies`
+1. **VSIX file** (GitHub Release or AirDrop) — build: `cd extension && npm install && npm run compile && npm run package`
 2. The `/try` page (steps 1–5)
 
 ---
@@ -38,7 +38,8 @@ They need:
 
 ### Backend live
 
-- [ ] `web/` deployed to Vercel
+- [ ] `web/` deployed to Vercel (**redeploy after adding `/try`** — old deploys 404)
+- [ ] Vercel project **Root Directory** = `web` (Project Settings → General)
 - [ ] Env: CPX, Supabase, `STORAGE_BACKEND=supabase`, `NEXT_PUBLIC_APP_URL`
 - [ ] CPX postback URL points to `https://YOUR_DOMAIN/api/cpx/postback?...`
 - [ ] Test: `curl https://YOUR_DOMAIN/api/config` → `"storageBackend":"supabase"`
@@ -47,7 +48,7 @@ They need:
 ### Extension package
 
 - [ ] `extension/src/api/defaults.ts` → `BUNDLED_API_BASE_URL = 'https://stay-on-nu.vercel.app'` (or your domain)
-- [ ] `npm run compile && npx vsce package --no-dependencies`
+- [ ] `cd extension && npm install && npm run compile && npm run package`
 - [ ] Upload `stayon-0.1.0.vsix` to GitHub Release
 
 ### Demo proof ready
@@ -101,6 +102,7 @@ Install VSIX
 | Points not updating | Check Vercel logs; CPX postback URL |
 | Earnings page empty | Wait 30s; confirm `userId` matches Wallet tab |
 | 0 on /try stats | Supabase env on Vercel wrong |
+| **`/try` returns 404** | Redeploy `web/` — routes exist locally but production is stale. Push to git (if Vercel auto-deploy) or run `cd web && npx vercel --prod` after `vercel login` |
 
 ---
 

@@ -53,8 +53,10 @@ export default function HomePage() {
               <InlineCode>stayon.apiBaseUrl</InlineCode> in the extension.
             </li>
           </ol>
-          <Button href="/try">Try StayOn (MEGATHON) →</Button>
-          <Button href="/setup" variant="secondary">Full setup guide →</Button>
+          <div className="flex flex-wrap gap-3">
+            <Button href="/try">Try StayOn (MEGATHON) →</Button>
+            <Button href="/setup" variant="secondary">Full setup guide →</Button>
+          </div>
         </Card>
 
         <footer className="flex flex-wrap gap-4 text-sm text-subtle-text">
