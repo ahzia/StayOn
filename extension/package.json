@@ -1,10 +1,11 @@
 {
   "name": "stayon",
-  "displayName": "StayOn",
-  "description": "Earn survey points while Cursor Agent works — real hooks, paid CPX surveys, gamified side panel.",
-  "version": "0.1.5",
+  "displayName": "StayOn — Earn Money While Agent Works",
+  "description": "Earn money during Cursor Agent wait time — real hooks, paid CPX surveys, live earnings ledger.",
+  "version": "0.1.6",
   "publisher": "stayon",
   "license": "MIT",
+  "icon": "media/stayon-icon.png",
   "repository": {
     "type": "git",
     "url": "https://github.com/ahzia/StayOn.git"

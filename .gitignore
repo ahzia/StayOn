@@ -40,3 +40,6 @@ web/node_modules/
 
 # Local StayOn runtime (user machine, not project)
 # ~/.stayon/ lives outside repo — listed here for clarity only
+
+# Pitch deck — separate repo (see pitch-deck/README.md)
+/pitch-deck/

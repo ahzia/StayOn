@@ -1,57 +1,46 @@
 # StayOn
 
-**Earn survey points while Cursor Agent works.**
+**Earn money while Cursor Agent works.**
 
-StayOn detects real agent busy time via Cursor hooks, opens a side panel with paid surveys (CPX Research), and syncs confirmed earnings to your StayOn wallet.
+Turn dead agent wait time into real paid surveys. StayOn opens automatically when Cursor Agent runs — complete a survey in your browser, track **real earnings** on your wallet, and jump back to code when the agent finishes.
+
+[Try StayOn →](https://stay-on-nu.vercel.app/try)
+
+## Why StayOn
+
+- **Money, not mock tokens** — CPX Research paid surveys with a live server ledger
+- **Zero extra effort** — panel opens on Agent busy; no manual timers
+- **Real integration** — Cursor hooks → localhost bridge (official, fail-open)
+- **Proof of income** — per-user [earnings page](https://stay-on-nu.vercel.app/earnings) for demos & judges
 
 ## Install (Cursor)
 
-1. Install **StayOn** from Open VSX (Extensions → search “StayOn”) **or** install from VSIX.
-2. Open your **project folder** in Cursor.
-3. Run **`StayOn: Set Up`** from the command palette (installs hooks — one time per project).
-4. Submit a **Cursor Agent** prompt — the panel opens while the agent works.
-
-Full beta guide: [stay-on-nu.vercel.app/try](https://stay-on-nu.vercel.app/try)
+1. **Extensions** → search **StayOn** → Install (or VSIX from GitHub Releases).
+2. Open your **project folder**.
+3. **`StayOn: Set Up`** — installs hooks once per project.
+4. Submit an **Agent** prompt → panel opens → **Open in browser** → complete a survey.
 
 ## Features
 
-- **Real busy detection** — Cursor project hooks → localhost bridge (no mock timers)
-- **Paid surveys** — CPX Research SurveyWall; open in browser while Agent runs
-- **Points & streaks** — gamified wait time (Learn/Perks for engagement)
-- **Survey earnings sync** — server-backed balance; view online from Wallet tab
-- **Agent ready alert** — chime + focus Cursor when Agent finishes (macOS & Windows)
-
-## Requirements
-
-- **Cursor** with Agent + Hooks
-- **Node.js** on PATH (for project hooks on Windows/Mac)
-- StayOn backend connected automatically in shipped builds (override: `stayon.apiBaseUrl`)
+| | |
+|--|--|
+| **Paid surveys** | CPX SurveyWall while Agent works |
+| **Earnings sync** | Server balance + Wallet tab (1000 pts = $1) |
+| **Gamification** | Streaks, levels, Learn/Perks (engagement only) |
+| **Agent ready** | Chime + focus Cursor when Agent finishes |
 
 ## Commands
 
-| Command | Purpose |
-|---------|---------|
-| `StayOn: Set Up` | Install hooks + verify bridge (run once per project) |
-| `StayOn: Open Panel` | Open the side panel |
-| `StayOn: Test Hook Bridge` | Debug hook → bridge path |
-| `StayOn: Show Debug Output` | Bridge event log |
-
-## Settings
-
-- `stayon.apiBaseUrl` — StayOn web backend (CPX + reward sync)
-- `stayon.cpxSurveys` — Enable paid surveys mode
-- `stayon.alertSoundOnReady` / `stayon.alertFocusOnReady` — Agent finished alerts
-
-## Privacy
-
-Survey profile (email, DOB) is stored on the StayOn backend for CPX matching. Hooks send at most 120 chars of your prompt to the local bridge only.
-
-[Privacy (beta)](https://stay-on-nu.vercel.app/privacy)
+- **`StayOn: Set Up`** — hooks + bridge check (once per project)
+- **`StayOn: Open Panel`** — side panel
+- **`StayOn: Show Debug Output`** — bridge log
 
 ## Beta note
 
-**Claim payout** (withdraw to bank/PayPal) is not in this release — balances are tracked on the [earnings page](https://stay-on-nu.vercel.app/earnings).
+Survey earnings are tracked in-app and online. **Bank/PayPal payout** (claim) ships in the next release — balances are real and visible today on the [earnings page](https://stay-on-nu.vercel.app/earnings).
 
-## Source
+## Privacy
 
-[github.com/ahzia/StayOn](https://github.com/ahzia/StayOn)
+Survey profile (email, DOB) is stored for CPX matching. Hooks never read your codebase.
+
+[Privacy (beta)](https://stay-on-nu.vercel.app/privacy) · [Source](https://github.com/ahzia/StayOn)
