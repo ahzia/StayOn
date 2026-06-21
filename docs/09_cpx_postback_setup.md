@@ -124,9 +124,18 @@ curl "http://localhost:3000/api/wallet/YOUR_EXTENSION_USER_ID/pending"
 
 ## Token conversion
 
-Default: **50% of CPX USD payout** → StayOn tokens at **10,000 tokens ≈ €1**.
+Credits use **`amount_local`** from the CPX postback (Points shown to the user in the survey wall). CPX already applies your publisher commission via the **currency factor** in the CPX dashboard (e.g. **700** = user gets 700 Points per $1 CPX pays you).
 
-Adjust with `CPX_USER_SHARE=0.5` in backend env.
+| Setting | Env var | Default |
+|---------|---------|---------|
+| Currency factor | `CPX_CURRENCY_FACTOR` | `700` |
+| Base rate | — | **1000 Points = $1** user-facing value |
+
+Fallback when `amount_local` is missing: `round(amount_usd × CPX_CURRENCY_FACTOR)`.
+
+Cash estimates in the app and on `/earnings`: **`points ÷ 1000` USD**.
+
+`CPX_USER_SHARE` is legacy and **not** applied to credits (avoid double commission).
 
 ---
 

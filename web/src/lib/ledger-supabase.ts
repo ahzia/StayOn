@@ -1,3 +1,4 @@
+import { ensureExtensionInstall } from '@/lib/db/extensionInstalls';
 import { CPX_POINTS_PER_USD } from '@/lib/cpx';
 import type { LedgerEntry } from '@/lib/ledger-types';
 import { createServiceClient } from '@/lib/supabase/server';

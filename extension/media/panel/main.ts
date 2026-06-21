@@ -402,7 +402,7 @@ function render(): void {
         <span class="meta">Lv.${wallet.level} · 🔥 ${wallet.dailyStreak}</span>
       </div>
       <div class="balance${balancePop}">${formatPoints(wallet.tokens)}</div>
-      <div class="cash">${wallet.cashEstimate}</div>
+      <div class="cash">Survey earnings ${wallet.cashEstimate}</div>
       ${activePerksHtml}
     </div>
 
@@ -658,7 +658,7 @@ function renderTask(task: TaskPayload): string {
 function renderWallet(): string {
   return `<div class="wallet-grid">
       <div class="stat-box"><div>Points</div><div class="stat-value points-value">${formatPoints(wallet!.tokens)}</div></div>
-      <div class="stat-box"><div>Cash est.</div><div class="stat-value">${wallet!.cashEstimate}</div></div>
+      <div class="stat-box"><div>Survey earnings</div><div class="stat-value">${wallet!.cashEstimate}</div></div>
     </div>
     <div class="progress-wrap">
       <div class="meta">Level ${wallet!.level} · ${wallet!.xpProgress}% to next</div>
@@ -681,6 +681,7 @@ function renderWallet(): string {
           : '<p class="context">Complete a wait-task to earn points.</p>'
       }
     </div>
+    <p class="context">Total points include Learn/Perks (no cash value). Survey earnings sync from the server.</p>
     <button class="btn secondary" id="open-earnings">View earnings online</button>
     <p class="context wallet-id-hint">Your ID: <code class="user-id">${escapeHtml(extensionUserId || '…')}</code></p>
     <button class="btn secondary" disabled>Claim payout — coming after beta</button>`;

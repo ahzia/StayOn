@@ -1,5 +1,5 @@
 export const ECONOMY = {
-  /** 1 point ≈ €0.0001 — wallet field is still `tokens` in persisted state */
+  /** Display-only legacy constant; CPX survey cash uses CPX_POINTS_PER_USD (1000 = $1). */
   POINT_TO_EUR: 0.0001,
   TOKEN_TO_EUR: 0.0001,
   FLOW_BONUS: 5,

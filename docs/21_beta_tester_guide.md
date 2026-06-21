@@ -9,14 +9,15 @@ Full ship plan: [20_ship_and_lifecycle_plan.md](./20_ship_and_lifecycle_plan.md)
 ## What you need
 
 - **Cursor** with Agent + Hooks enabled
-- **Windows or macOS** (v0.1.2+ uses Node hooks + file inbox fallback when Cursor blocks localhost HTTP)
+- **Windows or macOS** (use **v0.1.4** — Node hooks + Windows inbox fallback)
+- **Node.js** on Windows if Set Up asks for it ([nodejs.org](https://nodejs.org))
 - ~5 minutes for first-time setup
 
 ---
 
 ## 1. Install StayOn
 
-1. Download **`stayon-0.1.2.vsix`** from the release link your host sent you.
+1. Download **`stayon-0.1.4.vsix`** from the release link your host sent you.
 2. In Cursor: **Extensions** → **`...`** menu → **Install from VSIX...**
 3. Reload Cursor if prompted.
 4. You should see **StayOn** in the activity bar.
@@ -29,12 +30,13 @@ StayOn only opens when the **Cursor Agent** is working. That uses small project 
 
 1. **File → Open Folder** — open the project you code in (any folder).
 2. **Cmd+Shift+P** (Ctrl+Shift+P on Windows) → **StayOn: Set Up**
-3. Click **Set Up StayOn** — installs hooks and runs a self-test (no bash, no jq).
+3. Click **Set Up StayOn** — installs hooks and verifies the bridge (panel stays on “Waiting for agent…”).
 4. Submit a **Cursor Agent** prompt — the panel should open automatically.
 
-If setup fails, run **StayOn: Test Hook Bridge** and check **`~/.stayon/hook.log`** (Windows: `%USERPROFILE%\.stayon\hook.log`).
+If setup fails, run **StayOn: Test Hook Bridge** and check hook log:
 
-**Windows:** Node.js must be on PATH (install from [nodejs.org](https://nodejs.org) if **Set Up** says Node not found). Git Bash is **not** required on v0.1.1+.
+- macOS/Linux: `~/.stayon/hook.log`
+- Windows: `%USERPROFILE%\.stayon\hook.log` (note the backslash before `.stayon`)
 
 **Survey profile** (step 4 below) is optional for opening the panel — only needed for CPX paid surveys.
 
@@ -42,17 +44,11 @@ If setup fails, run **StayOn: Test Hook Bridge** and check **`~/.stayon/hook.log
 
 ## 3. Connect to StayOn backend
 
-If the panel says *“Connect StayOn backend”*:
-
-1. **Cmd + ,** → search **StayOn**
-2. Set **Api Base Url** to the URL your host gave you (e.g. `https://stay-on-nu.vercel.app`)
-3. Enable **Cpx Surveys**
-
-Or in `settings.json`:
+The shipped VSIX should connect automatically. If the panel says *“Connect StayOn backend”*:
 
 ```json
 {
-  "stayon.apiBaseUrl": "https://YOUR_STAYON_BACKEND",
+  "stayon.apiBaseUrl": "https://stay-on-nu.vercel.app",
   "stayon.cpxSurveys": true
 }
 ```
@@ -65,6 +61,8 @@ Or in `settings.json`:
 2. **Set up survey profile** — use a **valid email** (no typos), real birthday, correct **country**
 3. Wrong email/country often means **zero surveys** from CPX
 
+Survey data is described on **/privacy** on the StayOn website.
+
 ---
 
 ## 5. Earn points
@@ -74,10 +72,14 @@ Or in `settings.json`:
 3. StayOn opens when the agent is busy.
 4. Click **Open in browser** (most reliable for surveys).
 5. Complete a survey in the browser.
-6. Within ~30 seconds, your **⭐ balance** should increase.
-7. When the agent finishes, you’ll hear a **chime** and Cursor should come forward.
+6. Within ~30 seconds, survey points sync; **Survey earnings** line updates.
+7. When the agent finishes, you’ll hear a **chime** and Cursor should try to come forward.
 
-**Learn** and **Perks** give small engagement points — they are **not** cash-redeemable in the current beta.
+**Points vs money**
+
+- **Total points** (header) includes Learn/Perks — not all are cash.
+- **Survey earnings** (under balance) = confirmed CPX rewards (**1000 points = $1**).
+- **Claim payout** (bank/PayPal) is **not available in this beta**.
 
 ---
 
@@ -85,25 +87,21 @@ Or in `settings.json`:
 
 | Problem | Try |
 |---------|-----|
-| Panel never opens on Agent | Run **StayOn: Set Up** again; **StayOn: Test Hook Bridge**; check **StayOn: Show Debug Output** for `Agent busy (hook)` |
-| Hooks log fires but panel idle / `busy:false` | You need **v0.1.2+**. `post failed` in `%USERPROFILE%\.stayon\hook.log` = Cursor sandbox blocks hook HTTP (Windows). v0.1.2 writes to inbox fallback. Install VSIX → **StayOn: Set Up** → reload → Agent prompt. Success: `inbox event=beforeSubmitPrompt` or `ok event=...` in hook.log, and `bridge event: busy_start` in StayOn output. |
+| Panel never opens on Agent | **StayOn: Set Up** again; check StayOn output for `bridge event: busy_start` |
+| Hooks log fires but panel idle | Need **v0.1.4**. Check hook.log for `inbox event=` or `ok event=`. Reload after Set Up. |
 | No surveys listed | **StayOn: Reset Survey Identity**; fix profile email; use external browser |
-| Points not updating | Confirm `stayon.apiBaseUrl`; wait 30s; check output channel |
-| Survey bounces in panel | Use **Open in browser** instead of in-panel list |
+| Points not updating | Confirm backend live; wait 30s; **View earnings online** |
+| Survey bounces in panel | Use **Open in browser** |
 
 ---
 
 ## 7. See your income
 
-1. StayOn panel → **Wallet** tab → **View earnings online** (opens your personal page).
+1. StayOn panel → **Wallet** tab → **View earnings online**
 2. Or visit **https://stay-on-nu.vercel.app/earnings** and paste your user ID (shown in Wallet).
-
-Survey earnings are stored on the server. **Claim payout** comes in a later release.
-
-Full hackathon steps: [22_hackathon_share_guide.md](./22_hackathon_share_guide.md)
 
 ---
 
 ## 8. Privacy
 
-Survey profile (email, DOB) is stored on the StayOn backend for CPX survey matching. See your host’s privacy policy when published.
+Survey profile (email, DOB) is stored on the StayOn backend for CPX matching. See **/privacy** on the StayOn site.

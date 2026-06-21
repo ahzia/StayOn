@@ -64,7 +64,7 @@ export default async function TryPage() {
           <h2 className="text-xl font-medium text-brand">1. Install extension</h2>
           <Card className="space-y-2 text-sm text-muted">
             <p>
-              Download <strong className="text-foreground">stayon-0.1.1.vsix</strong> from the
+              Download <strong className="text-foreground">stayon-0.1.4.vsix</strong> from the
               release link your team shares (or build from repo).
             </p>
             <p>Cursor → Extensions → <code>...</code> → Install from VSIX → reload.</p>
@@ -100,7 +100,7 @@ export default async function TryPage() {
             <li>Pick <strong>Surveys</strong> at the bottom.</li>
             <li>Submit a Cursor <strong>Agent</strong> prompt.</li>
             <li>Click <strong>Open in browser</strong> and complete a survey.</li>
-            <li>Points sync within ~30 seconds.</li>
+            <p>Points sync within ~30 seconds. Survey earnings: <strong>1000 points = $1</strong>. Payout withdrawal is not in this beta yet.</p>
           </ol>
         </section>
 
@@ -128,10 +128,10 @@ export default async function TryPage() {
             View earnings
           </Link>
           <Link
-            href="/setup"
+            href="/privacy"
             className="rounded-lg border border-border px-4 py-2 text-sm text-foreground hover:bg-surface"
           >
-            CPX setup (hosts)
+            Privacy (beta)
           </Link>
         </section>
       </div>
