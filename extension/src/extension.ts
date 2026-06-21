@@ -19,6 +19,7 @@ import { showHookVerifyUI, verifyHookSetup } from './setup/verifyHooks';
 import { showInstallHooksUI } from './setup/installHooks';
 import { maybePromptSetup, showStayOnSetupUI } from './setup/setupFlow';
 import { showTestHookBridgeUI } from './setup/testBridge';
+import { consumeSelfTestSkipPanel } from './setup/selfTest';
 
 let outputChannel: vscode.OutputChannel;
 let bridge: BridgeServer | undefined;
@@ -95,6 +96,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   busyState.on('busyStart', () => {
     if (!isEnabled()) {
+      return;
+    }
+    if (consumeSelfTestSkipPanel()) {
+      log('Hook bridge self-test busy_start (panel skipped)');
+      busyState.handle({ event: 'session_end', ts: new Date().toISOString() }, log);
+      updateStatusBar(statusBarItem, wallet, 'idle');
       return;
     }
     log('Agent busy (hook)');

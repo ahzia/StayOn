@@ -16,7 +16,7 @@ Full ship plan: [20_ship_and_lifecycle_plan.md](./20_ship_and_lifecycle_plan.md)
 
 ## 1. Install StayOn
 
-1. Download **`stayon-0.1.1.vsix`** from the release link your host sent you.
+1. Download **`stayon-0.1.2.vsix`** from the release link your host sent you.
 2. In Cursor: **Extensions** → **`...`** menu → **Install from VSIX...**
 3. Reload Cursor if prompted.
 4. You should see **StayOn** in the activity bar.

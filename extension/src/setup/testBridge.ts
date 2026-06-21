@@ -5,6 +5,9 @@ import * as path from 'path';
 import { execFileSync } from 'child_process';
 import * as vscode from 'vscode';
 import { HOOK_SCRIPT_NAME, resolveNodeForHooks } from './installHooks';
+import { armSelfTestSkipPanel } from './selfTest';
+
+const SELF_TEST_PROMPT = 'StayOn bridge self-test';
 
 function readBridgePort(): number | undefined {
   try {
@@ -43,7 +46,7 @@ function runHookScript(hookScriptPath: string): string {
   const nodeBin = resolveNodeForHooks();
   const input = JSON.stringify({
     hook_event_name: 'beforeSubmitPrompt',
-    prompt: 'StayOn bridge self-test',
+    prompt: SELF_TEST_PROMPT,
   });
   return execFileSync(nodeBin, [hookScriptPath], {
     input,
@@ -53,9 +56,65 @@ function runHookScript(hookScriptPath: string): string {
   });
 }
 
+function readHookLogTail(maxLines = 5): string {
+  const logPath = path.join(os.homedir(), '.stayon', 'hook.log');
+  if (!fs.existsSync(logPath)) {
+    return '';
+  }
+  return fs.readFileSync(logPath, 'utf8').trim().split('\n').slice(-maxLines).join('\n');
+}
+
+function hookLogShowsBusyStartSuccess(): boolean {
+  const tail = readHookLogTail(8);
+  return (
+    tail.includes('ok event=beforeSubmitPrompt') ||
+    tail.includes('inbox event=beforeSubmitPrompt')
+  );
+}
+
+function postBridgeEvent(port: number, body: Record<string, unknown>): Promise<boolean> {
+  return new Promise((resolve) => {
+    const data = JSON.stringify(body);
+    const req = http.request(
+      {
+        hostname: '127.0.0.1',
+        port,
+        path: '/event',
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Content-Length': Buffer.byteLength(data),
+        },
+        timeout: 1500,
+      },
+      (res) => {
+        res.resume();
+        resolve(res.statusCode === 204 || res.statusCode === 200);
+      }
+    );
+    req.on('error', () => resolve(false));
+    req.on('timeout', () => {
+      req.destroy();
+      resolve(false);
+    });
+    req.write(data);
+    req.end();
+  });
+}
+
+async function resetBridgeAfterSelfTest(port: number): Promise<void> {
+  await postBridgeEvent(port, { event: 'session_end', ts: new Date().toISOString() });
+}
+
+export interface TestHookBridgeOptions {
+  /** Setup wizard: verify hook path without opening the panel or leaving busy state. */
+  forSetup?: boolean;
+}
+
 export async function testHookBridge(
   workspaceRoot: string | undefined,
-  log: (msg: string) => void
+  log: (msg: string) => void,
+  options?: TestHookBridgeOptions
 ): Promise<{ ok: boolean; message: string }> {
   const port = readBridgePort();
   if (!port) {
@@ -84,6 +143,10 @@ export async function testHookBridge(
   }
 
   let stdout = '';
+  if (options?.forSetup) {
+    armSelfTestSkipPanel();
+  }
+
   try {
     stdout = runHookScript(hookScriptPath);
   } catch (err) {
@@ -100,13 +163,30 @@ export async function testHookBridge(
     };
   }
 
-  await new Promise((r) => setTimeout(r, 250));
+  await new Promise((r) => setTimeout(r, options?.forSetup ? 400 : 250));
+
+  if (options?.forSetup) {
+    const hookOk = hookLogShowsBusyStartSuccess();
+    await resetBridgeAfterSelfTest(port);
+    if (!hookOk) {
+      const tail = readHookLogTail(3) || '(no hook.log yet)';
+      log(`Hook bridge test failed. hook.log tail:\n${tail}`);
+      return {
+        ok: false,
+        message: `Hook ran but bridge did not receive busy_start. See ~/.stayon/hook.log — run StayOn: Set Up again.`,
+      };
+    }
+
+    log('Hook bridge self-test passed (busy_start received, panel not opened)');
+    return {
+      ok: true,
+      message: 'Hook → bridge works. Submit an Agent prompt to open the panel.',
+    };
+  }
+
   const after = await fetchHealth(port);
   if (!after?.busy) {
-    const logPath = path.join(os.homedir(), '.stayon', 'hook.log');
-    const tail = fs.existsSync(logPath)
-      ? fs.readFileSync(logPath, 'utf8').trim().split('\n').slice(-3).join('\n')
-      : '(no hook.log yet)';
+    const tail = readHookLogTail(3) || '(no hook.log yet)';
     log(`Hook bridge test failed. hook.log tail:\n${tail}`);
     return {
       ok: false,
