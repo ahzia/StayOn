@@ -64,6 +64,29 @@ export async function focusHostWindow(log: (msg: string) => void): Promise<void>
     // ignore
   }
 
+  if (process.platform === 'win32') {
+    const appName = vscode.env.appName;
+    if (appName) {
+      await new Promise<void>((resolve) => {
+        execFile(
+          'powershell',
+          [
+            '-NoProfile',
+            '-Command',
+            `(New-Object -ComObject WScript.Shell).AppActivate('${appName.replace(/'/g, "''")}')`,
+          ],
+          (err) => {
+            if (err) {
+              log(`Focus window failed: ${String(err)}`);
+            }
+            resolve();
+          }
+        );
+      });
+    }
+    return;
+  }
+
   if (process.platform !== 'darwin') {
     return;
   }

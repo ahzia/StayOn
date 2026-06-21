@@ -124,9 +124,26 @@ export function parsePostbackSearchParams(searchParams: URLSearchParams): CpxPos
   };
 }
 
+/** CPX publisher dashboard: base rate (1000 Points = $1 user-facing value). */
+export const CPX_POINTS_PER_USD = 1000;
+
+export function postbackPoints(
+  amountLocal: number,
+  amountUsd: number,
+  currencyFactor = 700
+): number {
+  if (amountLocal > 0) {
+    return Math.max(0, Math.round(amountLocal));
+  }
+  if (amountUsd > 0) {
+    return Math.max(0, Math.round(amountUsd * currencyFactor));
+  }
+  return 0;
+}
+
+/** @deprecated Use postbackPoints — CPX amount_local already reflects publisher commission. */
 export function usdToTokens(amountUsd: number, userShare = 0.5): number {
-  // 10,000 tokens ≈ €1.00 (see extension economy.ts)
-  return Math.max(0, Math.round(amountUsd * 10_000 * userShare));
+  return postbackPoints(0, amountUsd, Math.round(CPX_POINTS_PER_USD * userShare));
 }
 
 function timingSafeEqual(a: string, b: string): boolean {

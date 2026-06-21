@@ -19,10 +19,10 @@ export type { LedgerEntry, LedgerStatus } from '@/lib/ledger-types';
 
 export async function upsertPostback(
   entry: Omit<LedgerEntry, 'createdAt' | 'updatedAt' | 'synced'> & { synced?: boolean },
-  userShare = 0.5
+  userUsdShare = 0
 ): Promise<LedgerEntry> {
   if (useSupabaseStorage()) {
-    return upsertPostbackSupabase(entry, userShare);
+    return upsertPostbackSupabase(entry, userUsdShare);
   }
   return upsertPostbackJson(entry);
 }
@@ -64,7 +64,7 @@ export async function getWalletSummary(userId: string) {
       pendingPoints: summary.pendingTokens,
       lifetimeEarnedPoints: available,
       lifetimeRedeemedPoints: 0,
-      cashEstimate: `≈ €${(available * 0.0001).toFixed(2)}`,
+      cashEstimate: `≈ $${(available / 1000).toFixed(2)}`,
       recentEvents: pending.map((p) => ({
         id: p.transId,
         transId: p.transId,

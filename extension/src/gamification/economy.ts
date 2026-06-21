@@ -20,9 +20,16 @@ export const ECONOMY = {
   FLOW_BOOST_BONUS: 15,
 } as const;
 
+/** CPX survey points: 1000 points = $1 (matches CPX publisher Reward Settings). */
+export const CPX_POINTS_PER_USD = 1000;
+
+export function cpxCashEstimate(earnedPoints: number): string {
+  const usd = earnedPoints / CPX_POINTS_PER_USD;
+  return `≈ $${usd.toFixed(2)}`;
+}
+
 export function cashEstimate(tokens: number): string {
-  const eur = tokens * ECONOMY.TOKEN_TO_EUR;
-  return `≈ €${eur.toFixed(2)}`;
+  return cpxCashEstimate(tokens);
 }
 
 export function streakMultiplier(dailyStreak: number): number {

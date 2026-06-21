@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
 import {
   parsePostbackSearchParams,
-  usdToTokens,
+  postbackPoints,
+  CPX_POINTS_PER_USD,
   validatePostbackHash,
 } from '@/lib/cpx';
 import { getCpxConfig } from '@/lib/env';
@@ -15,7 +16,7 @@ export const dynamic = 'force-dynamic';
  * https://YOUR_DOMAIN/api/cpx/postback?status={status}&trans_id={trans_id}&user_id={user_id}&sub_id={subid_1}&sub_id_2={subid_2}&amount_local={amount_local}&amount_usd={amount_usd}&offer_id={offer_ID}&hash={secure_hash}&ip_click={ip_click}&type={type}
  */
 export async function GET(request: Request) {
-  const { secret, userShare, skipIpCheck } = getCpxConfig();
+  const { secret, currencyFactor, skipIpCheck } = getCpxConfig();
 
   if (!secret) {
     return NextResponse.json({ ok: false, error: 'CPX_SECURE_HASH not configured' }, { status: 503 });
@@ -49,11 +50,16 @@ export async function GET(request: Request) {
     tokens = 0;
   } else if (isComplete || isScreenOut) {
     ledgerStatus = 'confirmed';
-    tokens = usdToTokens(params.amountUsd, userShare);
-    if (isScreenOut && tokens === 0 && params.amountUsd === 0) {
-      tokens = Math.max(1, Math.round(5 * userShare));
+    tokens = postbackPoints(params.amountLocal, params.amountUsd, currencyFactor);
+    if (isScreenOut && tokens === 0) {
+      tokens = 10;
     }
   }
+
+  const userUsd =
+    params.amountLocal > 0
+      ? params.amountLocal / CPX_POINTS_PER_USD
+      : tokens / CPX_POINTS_PER_USD;
 
   const entry = await upsertPostback(
     {
@@ -70,7 +76,7 @@ export async function GET(request: Request) {
       subId2: params.subId2,
       ipClick: params.ipClick,
     },
-    userShare
+    userUsd
   );
 
   return NextResponse.json({

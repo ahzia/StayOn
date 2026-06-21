@@ -1,5 +1,5 @@
 import { levelFromXp, xpForNextLevel } from './levels';
-import { cashEstimate } from './economy';
+import { cpxCashEstimate } from './economy';
 import type { Wallet, WalletSnapshot } from '../types';
 
 export const WALLET_KEY = 'stayon.wallet';
@@ -49,7 +49,7 @@ export function toSnapshot(wallet: Wallet): WalletSnapshot {
 
   return {
     tokens: wallet.tokens,
-    cashEstimate: cashEstimate(wallet.tokens),
+    cashEstimate: cpxCashEstimate(wallet.lastServerEarnedPoints ?? 0),
     level,
     xp: wallet.totalXp,
     xpForNext: xpNext,

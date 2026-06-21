@@ -10,8 +10,8 @@ type Props = {
   searchParams: Promise<{ userId?: string }>;
 };
 
-function formatEur(points: number): string {
-  return `≈ €${(points * 0.0001).toFixed(2)}`;
+function formatUsd(points: number): string {
+  return `≈ $${(points / 1000).toFixed(2)}`;
 }
 
 export default async function EarningsPage({ searchParams }: Props) {
@@ -103,7 +103,7 @@ export default async function EarningsPage({ searchParams }: Props) {
                 <p className="mt-1 text-2xl font-semibold text-foreground">
                   <PointsDisplay amount={summary.lifetimeEarnedPoints} />
                 </p>
-                <p className="text-sm text-subtle-text">{formatEur(summary.lifetimeEarnedPoints)}</p>
+                <p className="text-sm text-subtle-text">{formatUsd(summary.lifetimeEarnedPoints)}</p>
               </Card>
             </div>
 

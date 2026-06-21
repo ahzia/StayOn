@@ -1,4 +1,4 @@
-import { ensureExtensionInstall } from '@/lib/db/extensionInstalls';
+import { CPX_POINTS_PER_USD } from '@/lib/cpx';
 import type { LedgerEntry } from '@/lib/ledger-types';
 import { createServiceClient } from '@/lib/supabase/server';
 
@@ -77,7 +77,7 @@ async function isEventSynced(extensionUserId: string, eventId: string): Promise<
 
 export async function upsertPostbackSupabase(
   entry: Omit<LedgerEntry, 'createdAt' | 'updatedAt' | 'synced'> & { synced?: boolean },
-  userShare: number
+  userUsdShare: number
 ): Promise<LedgerEntry> {
   await ensureExtensionInstall(entry.userId);
   const supabase = createServiceClient();
@@ -108,7 +108,7 @@ export async function upsertPostbackSupabase(
         event_type: entry.type,
         status: entry.status,
         amount_usd_publisher: entry.amountUsd,
-        amount_usd_user_share: entry.amountUsd * userShare,
+        amount_usd_user_share: userUsdShare,
         points: entry.tokens,
         offer_id: entry.offerId,
         session_id: entry.subId1,
@@ -303,14 +303,14 @@ export async function getWalletSummarySupabase(userId: string): Promise<{
     .reduce((sum, row) => sum + row.points, 0);
 
   const available = balance?.available_points ?? 0;
-  const cashEur = available * 0.0001;
+  const cashUsd = available / CPX_POINTS_PER_USD;
 
   return {
     availablePoints: available,
     pendingPoints: unackedPoints,
     lifetimeEarnedPoints: balance?.lifetime_earned_points ?? 0,
     lifetimeRedeemedPoints: balance?.lifetime_redeemed_points ?? 0,
-    cashEstimate: `≈ €${cashEur.toFixed(2)}`,
+    cashEstimate: `≈ $${cashUsd.toFixed(2)}`,
     recentEvents: (events ?? []).map((row) => ({
       id: row.id,
       transId: row.external_trans_id,

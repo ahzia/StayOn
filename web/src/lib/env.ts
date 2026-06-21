@@ -10,6 +10,8 @@ export function getCpxConfig() {
   return {
     appId: process.env.CPX_APP_ID ?? '',
     secret: process.env.CPX_SECURE_HASH ?? '',
+    /** Matches CPX Reward Settings currency factor (1 USD publisher → N Points). */
+    currencyFactor: Number(process.env.CPX_CURRENCY_FACTOR ?? '700'),
     userShare: Number(process.env.CPX_USER_SHARE ?? '0.5'),
     skipIpCheck: process.env.CPX_SKIP_IP_CHECK === 'true',
   };
