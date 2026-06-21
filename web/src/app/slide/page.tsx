@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
 
 export default function SlidePage() {
-  redirect('/');
+  redirect('https://slides-stayon.vercel.app/');
 }
