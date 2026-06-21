@@ -9,7 +9,7 @@ Full ship plan: [20_ship_and_lifecycle_plan.md](./20_ship_and_lifecycle_plan.md)
 ## What you need
 
 - **Cursor** with Agent + Hooks enabled
-- **Windows or macOS** (v0.1.1+ uses Node hooks — no bash/jq install)
+- **Windows or macOS** (v0.1.2+ uses Node hooks + file inbox fallback when Cursor blocks localhost HTTP)
 - ~5 minutes for first-time setup
 
 ---
@@ -86,6 +86,7 @@ Or in `settings.json`:
 | Problem | Try |
 |---------|-----|
 | Panel never opens on Agent | Run **StayOn: Set Up** again; **StayOn: Test Hook Bridge**; check **StayOn: Show Debug Output** for `Agent busy (hook)` |
+| Hooks log fires but panel idle / `busy:false` | You need **v0.1.2+**. `post failed` in `%USERPROFILE%\.stayon\hook.log` = Cursor sandbox blocks hook HTTP (Windows). v0.1.2 writes to inbox fallback. Install VSIX → **StayOn: Set Up** → reload → Agent prompt. Success: `inbox event=beforeSubmitPrompt` or `ok event=...` in hook.log, and `bridge event: busy_start` in StayOn output. |
 | No surveys listed | **StayOn: Reset Survey Identity**; fix profile email; use external browser |
 | Points not updating | Confirm `stayon.apiBaseUrl`; wait 30s; check output channel |
 | Survey bounces in panel | Use **Open in browser** instead of in-panel list |

@@ -9,7 +9,9 @@ const STAYON_DIR = path.join(
   process.env.HOME || process.env.USERPROFILE || process.env.HOMEPATH || '',
   '.stayon'
 );
+const INBOX_DIR = path.join(STAYON_DIR, 'inbox');
 const LOG_FILE = path.join(STAYON_DIR, 'hook.log');
+const DEFAULT_PORTS = [3847, 3848, 3849, 3850, 3851, 3852];
 
 function logHook(msg) {
   try {
@@ -20,13 +22,32 @@ function logHook(msg) {
   }
 }
 
-function readPort() {
+function readPortCandidates() {
+  const ports = [];
+  const add = (value) => {
+    const n = Number(String(value || '').trim());
+    if (Number.isFinite(n) && n > 0 && !ports.includes(n)) {
+      ports.push(n);
+    }
+  };
+
   try {
-    const raw = fs.readFileSync(path.join(STAYON_DIR, 'port'), 'utf8').trim();
-    return raw || '3847';
+    add(fs.readFileSync(path.join(STAYON_DIR, 'port'), 'utf8'));
   } catch {
-    return '3847';
+    // ignore
   }
+
+  try {
+    add(fs.readFileSync(path.join(__dirname, '..', 'stayon-port'), 'utf8'));
+  } catch {
+    // ignore
+  }
+
+  for (const p of DEFAULT_PORTS) {
+    add(p);
+  }
+
+  return ports;
 }
 
 function postEvent(port, body) {
@@ -42,35 +63,85 @@ function postEvent(port, body) {
           'Content-Type': 'application/json',
           'Content-Length': Buffer.byteLength(data),
         },
-        timeout: 2000,
+        timeout: 1200,
       },
       (res) => {
         res.resume();
-        resolve(res.statusCode === 204 || res.statusCode === 200);
+        resolve({ ok: res.statusCode === 204 || res.statusCode === 200, port });
       }
     );
-    req.on('error', () => resolve(false));
+    req.on('error', (err) =>
+      resolve({ ok: false, port, err: String(err && err.message ? err.message : err) })
+    );
     req.on('timeout', () => {
       req.destroy();
-      resolve(false);
+      resolve({ ok: false, port, err: 'timeout' });
     });
     req.write(data);
     req.end();
   });
 }
 
+async function postWithFallback(body) {
+  const ports = readPortCandidates();
+  let lastErr = 'no ports';
+  for (const port of ports) {
+    const result = await postEvent(port, body);
+    if (result.ok) {
+      return { ok: true, port: result.port, via: 'http' };
+    }
+    lastErr = result.err || lastErr;
+  }
+  return { ok: false, err: lastErr };
+}
+
+function writeInbox(body) {
+  try {
+    fs.mkdirSync(INBOX_DIR, { recursive: true });
+    const name = `${Date.now()}-${body.event || 'event'}.json`;
+    fs.writeFileSync(path.join(INBOX_DIR, name), JSON.stringify(body));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function deliver(body, event) {
+  const httpResult = await postWithFallback(body);
+  if (httpResult.ok) {
+    logHook(`ok event=${event} port=${httpResult.port}`);
+    return;
+  }
+
+  if (writeInbox(body)) {
+    logHook(`inbox event=${event} (http blocked: ${httpResult.err || 'unknown'})`);
+    return;
+  }
+
+  logHook(`post failed event=${event} err=${httpResult.err || 'unknown'}`);
+}
+
 async function main() {
+  let raw = '';
+  try {
+    raw = fs.readFileSync(0, 'utf8').trim();
+  } catch {
+    process.exit(0);
+  }
+
+  if (!raw) {
+    process.exit(0);
+  }
+
   let input = {};
   try {
-    const raw = fs.readFileSync(0, 'utf8');
-    input = JSON.parse(raw || '{}');
+    input = JSON.parse(raw);
   } catch {
-    logHook('ERROR invalid JSON on stdin');
+    logHook(`ERROR invalid JSON on stdin len=${raw.length}`);
     process.exit(0);
   }
 
   const event = String(input.hook_event_name || '');
-  const port = readPort();
   const ts = new Date().toISOString();
 
   if (event === 'beforeSubmitPrompt') {
@@ -115,16 +186,13 @@ async function main() {
       break;
     default:
       if (event) {
-        logHook(`skip event=${event} port=${port}`);
+        logHook(`skip event=${event}`);
       }
       process.exit(0);
   }
 
   if (body) {
-    const ok = await postEvent(port, body);
-    logHook(
-      ok ? `ok event=${event} port=${port}` : `post failed event=${event} port=${port}`
-    );
+    await deliver(body, event);
   }
 
   process.exit(0);

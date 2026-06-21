@@ -3,6 +3,7 @@ import * as os from 'os';
 import * as path from 'path';
 import * as vscode from 'vscode';
 import { BridgeServer, findAvailablePort } from './bridge/server';
+import { startInboxPoller } from './bridge/inboxPoller';
 import { BusyState } from './bridge/busyState';
 import { StayOnPanelProvider } from './panel/StayOnPanel';
 import { TaskSession } from './gamification/tasks';
@@ -53,6 +54,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   const taskSession = new TaskSession();
   const busyState = new BusyState();
   let userId = getOrCreateUserId(context);
+  const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 
   const panelProvider = new StayOnPanelProvider(
     context,
@@ -119,8 +121,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   try {
     const port = await findAvailablePort(preferredPort);
     await bridge.start(port);
-    writeBridgeFiles(port);
+    writeBridgeFiles(port, workspaceRoot);
     log(`Port file written to ~/.stayon/port (${port})`);
+    const stopInbox = startInboxPoller(busyState, log);
+    context.subscriptions.push({ dispose: stopInbox });
   } catch (err) {
     log(`Bridge failed to start: ${String(err)}`);
     void vscode.window.showErrorMessage('StayOn bridge failed to start. Check StayOn output channel.');
@@ -189,8 +193,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     })
   );
 
-  const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-  const verify = root ? verifyHookSetup(root) : null;
+  const verify = workspaceRoot ? verifyHookSetup(workspaceRoot) : null;
   const hooksReady =
     verify &&
     verify.hooksJsonExists &&
@@ -198,7 +201,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     (verify.usesNodeHook || verify.hookScriptExecutable);
   if (verify && !hooksReady) {
     log('Hook setup incomplete — run "StayOn: Set Up"');
-    void maybePromptSetup(context, context.extensionUri, root, log);
+    void maybePromptSetup(context, context.extensionUri, workspaceRoot, log);
   }
 
   log('StayOn activated');
@@ -221,10 +224,21 @@ function isEnabled(): boolean {
   return vscode.workspace.getConfiguration('stayon').get<boolean>('enabled') ?? true;
 }
 
-function writeBridgeFiles(port: number): void {
+function writeBridgeFiles(port: number, workspaceRoot?: string): void {
   fs.mkdirSync(STAYON_DIR, { recursive: true });
+  fs.mkdirSync(path.join(STAYON_DIR, 'inbox'), { recursive: true });
   fs.writeFileSync(path.join(STAYON_DIR, 'port'), String(port));
   fs.writeFileSync(path.join(STAYON_DIR, 'pid'), String(process.pid));
+
+  if (workspaceRoot) {
+    try {
+      const cursorDir = path.join(workspaceRoot, '.cursor');
+      fs.mkdirSync(cursorDir, { recursive: true });
+      fs.writeFileSync(path.join(cursorDir, 'stayon-port'), String(port));
+    } catch {
+      // ignore
+    }
+  }
 }
 
 function updateStatusBar(item: vscode.StatusBarItem, wallet: Wallet, status: string): void {

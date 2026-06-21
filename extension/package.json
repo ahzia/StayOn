@@ -2,7 +2,7 @@
   "name": "stayon",
   "displayName": "StayOn",
   "description": "Earn points during Cursor Agent wait time",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "publisher": "stayon",
   "license": "MIT",
   "engines": {

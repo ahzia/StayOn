@@ -31,12 +31,11 @@ function quoteForHookCommand(part: string): string {
   return JSON.stringify(part);
 }
 
-/** Resolve a Node binary hooks can invoke (probed at install time). */
+/** Resolve an absolute Node binary path (Cursor hooks often lack shell PATH). */
 export function resolveNodeForHooks(): string {
   const candidates: string[] = [];
 
   if (process.platform === 'win32') {
-    candidates.push('node.exe', 'node');
     const programFiles = process.env.ProgramFiles;
     if (programFiles) {
       candidates.push(path.join(programFiles, 'nodejs', 'node.exe'));
@@ -45,16 +44,32 @@ export function resolveNodeForHooks(): string {
     if (programFilesX86) {
       candidates.push(path.join(programFilesX86, 'nodejs', 'node.exe'));
     }
+    candidates.push('node.exe', 'node');
   } else {
-    candidates.push('node');
-    candidates.push('/usr/local/bin/node');
-    candidates.push('/opt/homebrew/bin/node');
+    for (const whichCmd of ['/usr/bin/which', '/bin/which']) {
+      try {
+        const resolved = execFileSync(whichCmd, ['node'], {
+          encoding: 'utf8',
+          timeout: 5000,
+        }).trim();
+        if (resolved) {
+          candidates.push(resolved);
+        }
+      } catch {
+        // try next
+      }
+    }
+    candidates.push('/opt/homebrew/bin/node', '/usr/local/bin/node', 'node');
   }
 
   for (const candidate of candidates) {
     try {
       execFileSync(candidate, ['--version'], { stdio: 'ignore', timeout: 5000 });
-      return candidate;
+      try {
+        return fs.realpathSync(candidate);
+      } catch {
+        return candidate;
+      }
     } catch {
       // try next
     }
@@ -66,7 +81,10 @@ export function resolveNodeForHooks(): string {
 function writeHooksJson(hooksJsonPath: string, nodeBinary: string, hookScriptPath: string): void {
   const command = `${quoteForHookCommand(nodeBinary)} ${quoteForHookCommand(hookScriptPath)}`;
   const hooks = Object.fromEntries(
-    HOOK_EVENTS.map((event) => [event, [{ command }]])
+    HOOK_EVENTS.map((event) => [
+      event,
+      [{ command, timeout: 5 }],
+    ])
   );
   fs.writeFileSync(hooksJsonPath, `${JSON.stringify({ version: 1, hooks }, null, 2)}\n`);
 }

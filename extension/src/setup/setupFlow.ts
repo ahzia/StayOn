@@ -40,7 +40,7 @@ export async function runStayOnSetup(
   }
 
   await vscode.window.showInformationMessage(
-    'StayOn is ready. Submit a Cursor Agent prompt — the panel opens while the agent works.',
+    'StayOn bridge self-test passed. Submit a Cursor Agent prompt — the panel opens while the agent works. If it stays on “Waiting for agent…”, check ~/.stayon/hook.log (Hooks Execution Log ≠ bridge connected).',
     'Open Panel'
   ).then((choice) => {
     if (choice === 'Open Panel') {
@@ -49,6 +49,8 @@ export async function runStayOnSetup(
   });
 
   log(bridge.message);
+  log(`Hook command: node=${install.nodeBinary ?? 'node'} script=${install.hookScriptPath ?? '?'}`);
+  log(`After an Agent prompt, ~/.stayon/hook.log should show "ok event=beforeSubmitPrompt port=..."`);
   return true;
 }
 
