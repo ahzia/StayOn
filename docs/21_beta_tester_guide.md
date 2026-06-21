@@ -9,7 +9,7 @@ Full ship plan: [20_ship_and_lifecycle_plan.md](./20_ship_and_lifecycle_plan.md)
 ## What you need
 
 - **Cursor** with Agent + Hooks enabled
-- **Windows or macOS** (use **v0.1.4** — Node hooks + Windows inbox fallback)
+- **Windows or macOS** (use **v0.1.5** — Node hooks + Windows inbox fallback)
 - **Node.js** on Windows if Set Up asks for it ([nodejs.org](https://nodejs.org))
 - ~5 minutes for first-time setup
 
@@ -17,10 +17,9 @@ Full ship plan: [20_ship_and_lifecycle_plan.md](./20_ship_and_lifecycle_plan.md)
 
 ## 1. Install StayOn
 
-1. Download **`stayon-0.1.4.vsix`** from the release link your host sent you.
-2. In Cursor: **Extensions** → **`...`** menu → **Install from VSIX...**
-3. Reload Cursor if prompted.
-4. You should see **StayOn** in the activity bar.
+**Option A — Open VSX (easiest):** Cursor → Extensions → search **StayOn** → Install → reload.
+
+**Option B — VSIX:** Download **`stayon-0.1.5.vsix`** from GitHub Releases → Install from VSIX → reload.
 
 ---
 
@@ -88,7 +87,7 @@ Survey data is described on **/privacy** on the StayOn website.
 | Problem | Try |
 |---------|-----|
 | Panel never opens on Agent | **StayOn: Set Up** again; check StayOn output for `bridge event: busy_start` |
-| Hooks log fires but panel idle | Need **v0.1.4**. Check hook.log for `inbox event=` or `ok event=`. Reload after Set Up. |
+| Hooks log fires but panel idle | Need **v0.1.5+**. Check hook.log for `inbox event=` or `ok event=`. Reload after Set Up. |
 | No surveys listed | **StayOn: Reset Survey Identity**; fix profile email; use external browser |
 | Points not updating | Confirm backend live; wait 30s; **View earnings online** |
 | Survey bounces in panel | Use **Open in browser** |

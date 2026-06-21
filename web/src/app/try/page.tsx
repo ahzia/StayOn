@@ -64,10 +64,14 @@ export default async function TryPage() {
           <h2 className="text-xl font-medium text-brand">1. Install extension</h2>
           <Card className="space-y-2 text-sm text-muted">
             <p>
-              Download <strong className="text-foreground">stayon-0.1.4.vsix</strong> from the
-              release link your team shares (or build from repo).
+              <strong className="text-foreground">Option A — Open VSX (recommended):</strong> Cursor →
+              Extensions → search <strong>StayOn</strong> → Install → reload.
             </p>
-            <p>Cursor → Extensions → <code>...</code> → Install from VSIX → reload.</p>
+            <p>
+              <strong className="text-foreground">Option B — VSIX:</strong> download{' '}
+              <strong className="text-foreground">stayon-0.1.5.vsix</strong> from GitHub Releases →
+              Install from VSIX → reload.
+            </p>
           </Card>
         </section>
 
@@ -100,7 +104,8 @@ export default async function TryPage() {
             <li>Pick <strong>Surveys</strong> at the bottom.</li>
             <li>Submit a Cursor <strong>Agent</strong> prompt.</li>
             <li>Click <strong>Open in browser</strong> and complete a survey.</li>
-            <p>Points sync within ~30 seconds. Survey earnings: <strong>1000 points = $1</strong>. Payout withdrawal is not in this beta yet.</p>
+            <li>Points sync within ~30 seconds (1000 survey points = $1).</li>
+            <li>Payout withdrawal is not in this beta yet — balances are tracked on /earnings.</li>
           </ol>
         </section>
 

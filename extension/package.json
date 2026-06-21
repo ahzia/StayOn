@@ -1,10 +1,27 @@
 {
   "name": "stayon",
   "displayName": "StayOn",
-  "description": "Earn points during Cursor Agent wait time",
-  "version": "0.1.4",
+  "description": "Earn survey points while Cursor Agent works — real hooks, paid CPX surveys, gamified side panel.",
+  "version": "0.1.5",
   "publisher": "stayon",
   "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ahzia/StayOn.git"
+  },
+  "homepage": "https://stay-on-nu.vercel.app/try",
+  "bugs": {
+    "url": "https://github.com/ahzia/StayOn/issues"
+  },
+  "keywords": [
+    "cursor",
+    "agent",
+    "surveys",
+    "productivity",
+    "gamification",
+    "cpx",
+    "hooks"
+  ],
   "engines": {
     "vscode": "^1.85.0"
   },
@@ -97,7 +114,7 @@
         "stayon.alertFocusOnReady": {
           "type": "boolean",
           "default": true,
-          "description": "Bring Cursor to the foreground when the Agent finishes (macOS: activates the Cursor app)"
+          "description": "Bring Cursor to the foreground when the Agent finishes (macOS and Windows)"
         }
       }
     }
@@ -111,7 +128,8 @@
     "watch:esbuild": "node esbuild.js --watch",
     "watch:tsc": "tsc --noEmit --watch",
     "vscode:prepublish": "npm run compile -- --production",
-    "package": "vsce package --no-dependencies --allow-missing-repository"
+    "package": "vsce package --no-dependencies",
+    "publish:ovsx": "npm run compile && vsce package --no-dependencies && npx ovsx publish stayon-$(node -p \"require('./package.json').version\").vsix -p \"${OVSX_PAT}\""
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

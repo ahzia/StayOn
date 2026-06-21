@@ -47,9 +47,11 @@ They need:
 
 ### Extension package
 
-- [ ] `extension/src/api/defaults.ts` → `BUNDLED_API_BASE_URL = 'https://stay-on-nu.vercel.app'` (or your domain)
-- [ ] `cd extension && npm install && npm run compile && npm run package`
-- [ ] Upload `stayon-0.1.0.vsix` to GitHub Release
+- [ ] `BUNDLED_API_BASE_URL` in `extension/src/api/defaults.ts` → production URL
+- [ ] `cd extension && npm run compile && npm run package` → `stayon-0.1.5.vsix`
+- [ ] GitHub Release with VSIX attached
+- [ ] Open VSX: `npm run publish:ovsx` ([23_open_vsx_publish.md](./23_open_vsx_publish.md))
+- [ ] Vercel env: `CPX_CURRENCY_FACTOR=700`
 
 ### Demo proof ready
 
@@ -62,9 +64,8 @@ They need:
 ## Tester flow (5 minutes)
 
 ```
-Install VSIX
-  → StayOn: Install Hooks in Workspace
-  → Trust hooks in Cursor Settings
+Install (Open VSX or VSIX)
+  → StayOn: Set Up
   → Survey profile in panel
   → Agent prompt
   → Open in browser → complete survey
@@ -110,4 +111,4 @@ Install VSIX
 
 - Mollie claim payout ([19_possiblities.md](./19_possiblities.md))
 - Auth + account linking
-- Open VSX public listing
+- Final extension polish if needed (prefer web-only changes until then)

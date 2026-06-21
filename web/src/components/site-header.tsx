@@ -11,8 +11,11 @@ export function SiteHeader() {
           <span className="font-semibold tracking-tight">StayOn</span>
         </Link>
         <nav className="flex items-center gap-4 text-sm">
-          <Link href="/setup" className="text-muted transition-colors hover:text-foreground">
-            Setup
+          <Link href="/try" className="text-muted transition-colors hover:text-foreground">
+            Try
+          </Link>
+          <Link href="/earnings" className="text-muted transition-colors hover:text-foreground">
+            Earnings
           </Link>
           <ThemeToggle />
         </nav>

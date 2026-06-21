@@ -116,6 +116,18 @@ export default async function EarningsPage({ searchParams }: Props) {
               </p>
             </Card>
 
+            <Card className="space-y-3 border-brand/30 bg-brand/5">
+              <h2 className="text-lg font-medium text-foreground">Claim payout</h2>
+              <p className="text-sm text-muted">
+                Withdrawals (bank / PayPal via Mollie) are coming in a post-beta release. Your
+                confirmed survey balance is tracked here and in the extension Wallet tab — no
+                action needed for the hackathon demo.
+              </p>
+              <p className="text-xs text-subtle-text">
+                1000 survey points = $1 USD · Learn/Perks points in the extension are not withdrawable.
+              </p>
+            </Card>
+
             <section className="space-y-3">
               <h2 className="text-lg font-medium text-foreground">Recent survey rewards</h2>
               {summary.recentEvents.length === 0 ? (
