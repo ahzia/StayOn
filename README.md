@@ -4,6 +4,10 @@ Earn survey points during Cursor Agent wait time — real hook-based busy detect
 
 **Try it:** [stay-on-nu.vercel.app/try](https://stay-on-nu.vercel.app/try)
 
+> **Using Claude Code?** StayOn now also ships as a Claude Code Mod: a `TASKS.md`
+> checklist plus one useful task to do while Claude works.
+> See **[ahzia/StayOn-Claude-Mod](https://github.com/ahzia/StayOn-Claude-Mod)**.
+
 ## Install (beta testers)
 
 1. **Cursor** → Extensions → search **StayOn** (Open VSX) **or** install `stayon-0.1.5.vsix` from [Releases](https://github.com/ahzia/StayOn/releases).
